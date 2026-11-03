@@ -1,6 +1,6 @@
 # Thin convenience wrapper around uv.
 # Optional: on Windows without make, run the uv commands directly.
-.PHONY: help install lint format test sample
+.PHONY: help install lint format test sample download prepare data
 
 help:        ## List available targets
 	@grep -E '^[a-z-]+:.*##' Makefile
@@ -19,5 +19,13 @@ format:      ## Auto-format code and fix lint issues
 test:        ## Run the test suite (offline, sample data)
 	uv run pytest
 
-sample:      ## Regenerate the synthetic sample dataset
+sample:      ## Rebuild the committed sample dataset (needs network)
 	uv run almaty-access sample
+
+download:    ## Download all raw datasets for the full city (cached)
+	uv run almaty-access download
+
+prepare:     ## Build all interim layers for the full city (cached)
+	uv run almaty-access prepare
+
+data: download prepare ## Full Phase 1 data pipeline

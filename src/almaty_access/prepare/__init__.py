@@ -1,5 +1,8 @@
-"""Phase 1: cleaning and preparation of raw layers.
+"""Phase 1: cleaning and preparation of raw layers (into data/interim/).
 
-Planned modules (README §9): boundary.py, network.py, pois.py,
-buildings.py. Implemented in Phase 1.
+Modules: boundary.py (city/districts/buffer), pois.py (categorization),
+buildings.py (OSM+Overture merge, floors, function, GFA),
+population.py (r8 clean + dasymetric r9), dem.py (reproject + slope),
+network.py (node elevations, edge grades), completeness.py (OSM vs
+Overture audit).
 """

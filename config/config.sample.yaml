@@ -1,0 +1,66 @@
+# Sample-dataset configuration: a small bbox in central Almaty with all
+# data paths under data/sample/. Tests and CI run on the files this
+# config produces; raw sample files are committed, interim is generated.
+# Everything else mirrors config/config.yaml.
+
+project:
+  study_area: "Almaty, Kazakhstan"
+  buffer_km: 5.0
+
+crs:
+  metric: "EPSG:32643"
+  storage: "EPSG:4326"
+
+h3:
+  analysis_resolution: 8
+  fine_resolution: 9
+
+travel:
+  thresholds_min: [15, 30, 45, 60]
+  speeds_kmh:
+    walk: 4.8
+    bike: 15.0
+  departure_window: ["07:00", "09:00"]
+
+paths:
+  raw: data/sample/raw
+  interim: data/sample/interim
+  processed: data/sample/processed
+  sample: data/sample
+  figures: reports/figures
+
+area:
+  place: "Almaty, Kazakhstan"
+  # ~1.7 x 2.2 km in the dense Almaly core (Panfilov park / Zhibek Zholy).
+  bbox: [76.925, 43.235, 76.945, 43.255]
+
+districts:
+  - { key: alatau, osm_name: "Алатауский район" }
+  - { key: almaly, osm_name: "Алмалинский район" }
+  - { key: auezov, osm_name: "Ауэзовский район" }
+  - { key: bostandyk, osm_name: "Бостандыкский район" }
+  - { key: zhetysu, osm_name: "Жетысуский район" }
+  - { key: medeu, osm_name: "Медеуский район" }
+  - { key: nauryzbay, osm_name: "Наурызбайский район" }
+  - { key: turksib, osm_name: "Турксибский район" }
+
+sources:
+  geofabrik_pbf_url: "https://download.geofabrik.de/asia/kazakhstan-latest.osm.pbf"
+  kontur_gpkg_url: "https://geodata-eu-central-1-kontur-public.s3.amazonaws.com/kontur_datasets/kontur_population_KZ_20231101.gpkg.gz"
+  overture_release: "2026-10-21.0"
+  dem_tile_url_template: "https://copernicus-dem-30m.s3.amazonaws.com/{name}/{name}.tif"
+
+buildings:
+  iou_threshold: 0.5
+  m_per_level: 3.0
+  default_levels:
+    residential: 2.0
+    commercial: 2.0
+    industrial: 1.0
+    public: 2.0
+    unknown: 1.0
+
+pois:
+  categories_file: config/poi_categories.yaml
+
+random_seed: 42

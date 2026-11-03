@@ -25,6 +25,8 @@ import yaml
 from pyproj import CRS
 from pyproj.exceptions import CRSError
 
+from almaty_access.schemas import BUILDING_FUNCTIONS
+
 DEFAULT_CONFIG_PATH = Path("config") / "config.yaml"
 
 _TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
@@ -89,11 +91,51 @@ class PathsConfig:
 
 
 @dataclass(frozen=True)
-class SampleConfig:
-    """Parameters of the synthetic sample dataset used by tests and CI."""
+class AreaConfig:
+    """What to download: a geocodable place, optionally narrowed to a bbox.
 
-    bbox: tuple[float, float, float, float]
-    n_points: int
+    ``bbox`` is ``(min_lon, min_lat, max_lon, max_lat)`` in EPSG:4326.
+    When set (the sample config does this), downloads that support it use
+    the bbox instead of the full buffered city polygon.
+    """
+
+    place: str
+    bbox: tuple[float, float, float, float] | None
+
+
+@dataclass(frozen=True)
+class DistrictConfig:
+    """One administrative district: our short key + its OSM name tag."""
+
+    key: str
+    osm_name: str
+
+
+@dataclass(frozen=True)
+class SourcesConfig:
+    """Verified upstream data sources (see DECISIONS.md for provenance)."""
+
+    geofabrik_pbf_url: str
+    kontur_gpkg_url: str
+    overture_release: str
+    dem_tile_url_template: str
+    """Template with a ``{name}`` placeholder for the GLO-30 tile name."""
+
+
+@dataclass(frozen=True)
+class BuildingsConfig:
+    """Building merge and floor-estimation parameters."""
+
+    iou_threshold: float
+    m_per_level: float
+    default_levels: dict[str, float]
+
+
+@dataclass(frozen=True)
+class PoisConfig:
+    """POI categorization parameters."""
+
+    categories_file: Path
 
 
 @dataclass(frozen=True)
@@ -102,12 +144,20 @@ class Config:
 
     study_area: str
     buffer_km: float
+    area: AreaConfig
+    districts: tuple[DistrictConfig, ...]
     crs: CRSConfig
     h3: H3Config
     travel: TravelConfig
     paths: PathsConfig
-    sample: SampleConfig
+    sources: SourcesConfig
+    buildings: BuildingsConfig
+    pois: PoisConfig
     random_seed: int
+    source_path: Path
+    """The YAML file this configuration was loaded from. Pipeline steps
+    list it among their cache inputs, so edits to tunable parameters
+    (buffer, IoU threshold, floor defaults, ...) trigger rebuilds."""
 
 
 def seed_everything(seed: int) -> None:
@@ -153,7 +203,6 @@ def load_config(path: str | Path = DEFAULT_CONFIG_PATH) -> Config:
     h3_section = _section(raw, "h3")
     travel = _section(raw, "travel")
     paths_section = _section(raw, "paths")
-    sample_section = _section(raw, "sample")
 
     analysis_res = _resolution_from(h3_section.get("analysis_resolution"), "h3.analysis_resolution")
     fine_res = _resolution_from(h3_section.get("fine_resolution"), "h3.fine_resolution")
@@ -166,6 +215,8 @@ def load_config(path: str | Path = DEFAULT_CONFIG_PATH) -> Config:
     return Config(
         study_area=_non_empty_str(project.get("study_area"), "project.study_area"),
         buffer_km=_non_negative_number(project.get("buffer_km"), "project.buffer_km"),
+        area=_area_from(_section(raw, "area")),
+        districts=_districts_from(raw.get("districts")),
         crs=CRSConfig(
             metric=_crs_from(crs_section.get("metric"), key="crs.metric", expect_projected=True),
             storage=_crs_from(
@@ -179,11 +230,11 @@ def load_config(path: str | Path = DEFAULT_CONFIG_PATH) -> Config:
             departure_window=_window_from(travel.get("departure_window")),
         ),
         paths=_paths_from(paths_section, root),
-        sample=SampleConfig(
-            bbox=_bbox_from(sample_section.get("bbox")),
-            n_points=_positive_int(sample_section.get("n_points"), "sample.n_points"),
-        ),
+        sources=_sources_from(_section(raw, "sources")),
+        buildings=_buildings_from(_section(raw, "buildings")),
+        pois=_pois_from(_section(raw, "pois"), root),
         random_seed=_seed_from(raw.get("random_seed")),
+        source_path=resolved,
     )
 
 
@@ -312,14 +363,103 @@ def _window_from(value: Any) -> tuple[str, str]:
 
 def _bbox_from(value: Any) -> tuple[float, float, float, float]:
     if not (isinstance(value, list) and len(value) == 4 and all(_is_number(v) for v in value)):
-        raise ValueError("config error: 'sample.bbox' must be [min_lon, min_lat, max_lon, max_lat]")
+        raise ValueError("config error: 'area.bbox' must be [min_lon, min_lat, max_lon, max_lat]")
     min_lon, min_lat, max_lon, max_lat = (float(v) for v in value)
     if not (-180 <= min_lon < max_lon <= 180) or not (-90 <= min_lat < max_lat <= 90):
         raise ValueError(
-            "config error: 'sample.bbox' must satisfy -180 <= min_lon < max_lon <= 180 "
+            "config error: 'area.bbox' must satisfy -180 <= min_lon < max_lon <= 180 "
             "and -90 <= min_lat < max_lat <= 90"
         )
     return (min_lon, min_lat, max_lon, max_lat)
+
+
+def _area_from(section: dict[str, Any]) -> AreaConfig:
+    place = _non_empty_str(section.get("place"), "area.place")
+    bbox_raw = section.get("bbox")
+    bbox = None if bbox_raw is None else _bbox_from(bbox_raw)
+    return AreaConfig(place=place, bbox=bbox)
+
+
+def _districts_from(value: Any) -> tuple[DistrictConfig, ...]:
+    if not isinstance(value, list) or not value:
+        raise ValueError("config error: 'districts' must be a non-empty list")
+    districts: list[DistrictConfig] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValueError(
+                f"config error: 'districts[{index}]' must be a mapping with key and osm_name"
+            )
+        districts.append(
+            DistrictConfig(
+                key=_non_empty_str(item.get("key"), f"districts[{index}].key"),
+                osm_name=_non_empty_str(item.get("osm_name"), f"districts[{index}].osm_name"),
+            )
+        )
+    keys = [district.key for district in districts]
+    if len(set(keys)) != len(keys):
+        raise ValueError("config error: district keys must be unique")
+    return tuple(districts)
+
+
+def _url_from(value: Any, key: str) -> str:
+    url = _non_empty_str(value, key)
+    if not url.startswith(("http://", "https://")):
+        raise ValueError(f"config error: '{key}' must be an http(s) URL")
+    return url
+
+
+def _sources_from(section: dict[str, Any]) -> SourcesConfig:
+    template = _url_from(section.get("dem_tile_url_template"), "sources.dem_tile_url_template")
+    if "{name}" not in template:
+        raise ValueError(
+            "config error: 'sources.dem_tile_url_template' must contain a '{name}' placeholder"
+        )
+    return SourcesConfig(
+        geofabrik_pbf_url=_url_from(section.get("geofabrik_pbf_url"), "sources.geofabrik_pbf_url"),
+        kontur_gpkg_url=_url_from(section.get("kontur_gpkg_url"), "sources.kontur_gpkg_url"),
+        overture_release=_non_empty_str(
+            section.get("overture_release"), "sources.overture_release"
+        ),
+        dem_tile_url_template=template,
+    )
+
+
+def _buildings_from(section: dict[str, Any]) -> BuildingsConfig:
+    iou = section.get("iou_threshold")
+    if not _is_number(iou) or not (0 < iou <= 1):
+        raise ValueError("config error: 'buildings.iou_threshold' must be a number in (0, 1]")
+    m_per_level = section.get("m_per_level")
+    if not _is_number(m_per_level) or m_per_level <= 0:
+        raise ValueError("config error: 'buildings.m_per_level' must be a positive number")
+    defaults_raw = section.get("default_levels")
+    if not isinstance(defaults_raw, dict) or not defaults_raw:
+        raise ValueError(
+            "config error: 'buildings.default_levels' must map building function -> levels"
+        )
+    defaults: dict[str, float] = {}
+    for function, levels in defaults_raw.items():
+        if not _is_number(levels) or levels <= 0:
+            raise ValueError(
+                f"config error: 'buildings.default_levels.{function}' must be a positive number"
+            )
+        defaults[str(function)] = float(levels)
+    missing = [f for f in BUILDING_FUNCTIONS if f not in defaults]
+    if missing:
+        raise ValueError(
+            f"config error: 'buildings.default_levels' is missing functions: {missing}"
+        )
+    return BuildingsConfig(
+        iou_threshold=float(iou), m_per_level=float(m_per_level), default_levels=defaults
+    )
+
+
+def _pois_from(section: dict[str, Any], root: Path) -> PoisConfig:
+    value = _non_empty_str(section.get("categories_file"), "pois.categories_file")
+    candidate = Path(value)
+    resolved = candidate if candidate.is_absolute() else root / candidate
+    if not resolved.exists():
+        raise ValueError(f"config error: 'pois.categories_file' does not exist: {resolved}")
+    return PoisConfig(categories_file=resolved)
 
 
 def _paths_from(section: dict[str, Any], root: Path) -> PathsConfig:

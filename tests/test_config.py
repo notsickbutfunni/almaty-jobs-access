@@ -13,11 +13,17 @@ from almaty_access.config import Config, load_config
 
 
 def _mutated_config(config_path: Path, tmp_path: Path, mutate: Callable[[dict], None]) -> Path:
-    """Copy the real config, apply ``mutate`` to the parsed dict, write to tmp."""
+    """Copy the real config, apply ``mutate`` to the parsed dict, write to tmp.
+
+    The POI categories file is referenced by an absolute path first, so a
+    config copied into tmp still passes the file-exists validation (unless
+    the mutation under test deliberately breaks it).
+    """
     raw = yaml.safe_load(config_path.read_text(encoding="utf-8-sig"))
+    raw["pois"]["categories_file"] = str((config_path.parent / "poi_categories.yaml").resolve())
     mutate(raw)
     out = tmp_path / "config.yaml"
-    out.write_text(yaml.safe_dump(raw), encoding="utf-8")
+    out.write_text(yaml.safe_dump(raw, allow_unicode=True), encoding="utf-8")
     return out
 
 
@@ -32,7 +38,13 @@ def test_repo_config_is_valid(repo_config: Config) -> None:
     assert repo_config.travel.speeds_kmh["walk"] == pytest.approx(4.8)
     assert repo_config.travel.speeds_kmh["bike"] == pytest.approx(15.0)
     assert repo_config.random_seed == 42
-    assert repo_config.sample.n_points > 0
+    assert len(repo_config.districts) == 8
+    assert repo_config.area.place
+    assert repo_config.area.bbox is None
+    assert repo_config.buildings.iou_threshold == pytest.approx(0.5)
+    assert set(repo_config.buildings.default_levels) >= {"residential", "unknown"}
+    assert repo_config.pois.categories_file.exists()
+    assert repo_config.sources.geofabrik_pbf_url.startswith("https://")
 
 
 def test_paths_resolve_against_repo_root(repo_config: Config, config_path: Path) -> None:
@@ -88,8 +100,21 @@ INVALID_CASES = [
     pytest.param(_delete("travel.speeds_kmh.walk"), id="speed-walk-missing"),
     pytest.param(_set("travel.departure_window", ["9:00", "11:00"]), id="window-bad-format"),
     pytest.param(_set("travel.departure_window", ["09:00", "07:00"]), id="window-reversed"),
-    pytest.param(_set("sample.bbox", [76.97, 43.22, 76.89, 43.28]), id="bbox-min-max-swapped"),
-    pytest.param(_set("sample.n_points", 0), id="n-points-zero"),
+    pytest.param(_set("area.bbox", [76.97, 43.22, 76.89, 43.28]), id="bbox-min-max-swapped"),
+    pytest.param(_set("area.place", ""), id="area-place-empty"),
+    pytest.param(_set("districts", []), id="districts-empty"),
+    pytest.param(
+        _set("districts", [{"key": "a", "osm_name": "X"}, {"key": "a", "osm_name": "Y"}]),
+        id="districts-duplicate-keys",
+    ),
+    pytest.param(_set("sources.geofabrik_pbf_url", "ftp://x"), id="source-not-http"),
+    pytest.param(
+        _set("sources.dem_tile_url_template", "https://example.com/dem.tif"),
+        id="dem-template-no-placeholder",
+    ),
+    pytest.param(_set("buildings.iou_threshold", 1.5), id="iou-out-of-range"),
+    pytest.param(_delete("buildings.default_levels.unknown"), id="default-levels-missing"),
+    pytest.param(_set("pois.categories_file", "config/nope.yaml"), id="pois-file-missing"),
     pytest.param(_set("random_seed", -1), id="seed-negative"),
     pytest.param(_set("random_seed", 2**40), id="seed-above-numpy-max"),
     pytest.param(_set("random_seed", "42"), id="seed-not-int"),

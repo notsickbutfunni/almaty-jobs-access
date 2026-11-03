@@ -132,3 +132,146 @@ single-file modules would be dead code bordering on placeholder stubs
 - GitHub repo name: `almaty-jobs-access` as in README §9?
 - README still says "Status: planning … Code does not exist yet" —
   update that line in the Phase 0 commit or later?
+
+## Phase 1 — Data acquisition and cleaning (2026-11-03)
+
+All five data sources were verified live by a 5-agent research pass
+before implementation (URLs fetched, files downloaded and inspected,
+APIs called). The findings below cite that pass.
+
+### D-014: the sample dataset is now REAL clipped data
+`data/sample/raw/` holds genuine downloads for a ~1.7x2.2 km bbox in
+the Almaly core (buildings, POIs, land use, networks, population hexes,
+DEM clip, tiny .osm.pbf), produced by `almaty-access sample` via
+`config/config.sample.yaml`. Tests and CI only read the committed
+files. The Phase 0 synthetic generator (sample.py) was removed — real
+raw-format data exercises the actual prepare code, synthetic shapes do
+not. District stats in the sample remain synthetic and are labelled
+`source=synthetic-for-tests` (real statistics are never fabricated).
+
+### D-015: three OSM access paths, each for what it is best at
+osmnx 2.1 for boundary + the three routable graphs (clean simplification,
+largest strongly connected component); Geofabrik country PBF (~215 MB,
+verified) + pyosmium 4.3 for bulk buildings/POIs/landuse extraction; in
+bbox mode (sample) an Overpass XML export converted to a tiny PBF feeds
+the SAME extractor. Overpass reliability: the main instance refused
+connections during implementation, so the code uses the kumi.systems
+mirror for queries and tries overpass-api.de's dedicated /api/map
+endpoint first for bbox exports, with a mirror fallback. pyosmium ships
+cp312 wheels for Windows and manylinux (verified on PyPI).
+
+### D-016: district statistics are BETTER than the README feared
+README §12 listed "district employment stats unavailable" as the top
+risk. Research falsified that: the Bureau of National Statistics'
+Taldau API serves, per district, (a) employed RESIDENTS (LFS survey,
+indicator 702840, annual 2019-2025) and (b) payroll JOBS at the
+workplace's district (forms 1-T + 2-MP, indicator 18935544, quarterly
+2016-2026Q1) — verified live for all 8 districts. (b) is the correct
+Phase 3 training target (jobs located, not commuters), and the contrast
+proves it: Almaly has ~250k jobs vs ~132k employed residents; Alatau
+~63k jobs vs ~187k residents. Quarterly x multi-year data also means
+far more than 8 training rows. `download stats` auto-fetches both into
+`district_stats.csv` when absent; an existing file is validated but
+NEVER overwritten (it may be manually curated). Enterprise counts by
+district (XLSX, 1999-2025) exist as covariates. Usage terms: free with
+attribution to the Bureau (stat.gov.kz/ru/description/).
+
+### D-017: district matching is multilingual and case-insensitive
+OSM tags Almaty's districts with Kazakh primary names ('Алмалы ауданы',
+…, and 'Түрксіб Ауданы' with a capitalization quirk); Russian lives in
+name:ru. The boundary download keeps name/name_ru/name_kk and prepare
+matches the configured name against all three, casefolded, failing
+loudly with the names it actually found. Config keeps Russian names
+(the user's working language).
+
+### D-018: population = Kontur KZ release 2023-11-01
+Direct public S3 URL (no auth), 14.9 MB gz; layer `population`, columns
+h3 (res 8) / population, EPSG:3857 — all verified by downloading and
+opening the file. CC BY (attribute Kontur). No newer ready-made H3 r8
+product exists (checked Kontur global + GHSL); if fresher data is ever
+needed, aggregate GHS-POP R2023A rasters to H3 manually.
+
+### D-019: DEM = Copernicus GLO-30 COGs on AWS (no auth)
+Two 1°x1° tiles (N43/E076, N43/E077, ~37+33 MB) cover the study area;
+the downloader does a windowed mosaic so only the needed blocks move.
+GLO-30 is a surface model (includes buildings/vegetation) — acceptable
+for street-slope estimation; heights are meters above EGM2008. The
+required attribution text is recorded in data/README.md.
+
+### D-020: no GTFS for Almaty — confirmed, fallback planned
+Exhaustive check (Mobility Database catalog, transitland atlas,
+open.egov.kz, city portals, 2GIS): no public GTFS exists. Phase 4 will
+build the approximate transit network from OSM route relations with
+assumed speeds/headways, as README §7 already planned, labelled
+"approximate".
+
+### D-021: floor estimation uses tags -> height -> per-function defaults
+`building:levels` (or Overture `num_floors`) when present, else
+height / 3 m (OSM or Overture height; GHSL height rasters deliberately
+skipped for now — optional per README §5.2), else defaults from config
+(residential/commercial 2.0, industrial 1.0, public 2.0, unknown 1.0).
+Defaults are config so Phase 3's sensitivity analysis can vary them.
+
+### D-022: land use is a polygon layer, not POI points
+README §7 listed `landuse=*` among POI tag groups; implemented instead
+as a separate `osm_landuse.parquet` polygon layer used by the building
+function classifier (and Phase 2 area-share features). Turning area
+features into centroid "POIs" would double-count and blur both uses.
+
+### D-023: Overture buildings via the overturemaps package
+Release 2026-10-21.0, schema v2.0.0 (attributes: height, num_floors,
+subtype, class — verified). Python API `record_batch_reader("building",
+bbox=…)`. The buildings theme is ODbL (not CDLA — that is Places), so
+the merged building layer carries OSM+Overture ODbL attribution.
+
+### D-024: fixes from the Phase 1 adversarial review
+A 4-lens review (conformance, correctness, tests/CI, data quality of the
+actual sample outputs) drove these changes, each verified by
+re-measuring the sample:
+- **POI rules**: pharmacy moved above the health_clinic healthcare
+  wildcard (15 of 27 pharmacies had been miscategorized as clinics —
+  now 27/27 correct); transit_stop now matches platforms/stations, not
+  PTv2 stop_positions, which double-counted stops (188 → 109 ≈ the
+  number of physical stops).
+- **DSM grades**: node elevations are sampled from a moving-minimum
+  filtered GLO-30 (3 px ≈ 80 m) to approximate ground under buildings,
+  and the grade cap tightened 0.6 → 0.3. Walk-edge mean |grade| fell
+  4.7% → 2.9% (plausible for central Almaty); edges >10% fell
+  13.8% → 6.8%. Residual short-edge noise from 27 m pixels accepted
+  and documented.
+- **Buildings**: non-occupiable structures (roof, construction, bridge,
+  ruins, ...) are dropped (~58,000 m² phantom GFA in the sample);
+  hangar now maps to industrial.
+- **Boundary download**: osmnx ORs tag filters, so the raw layer had
+  oblast/village polygons labelled 'district'; now strictly filtered to
+  admin_level 6 (and the committed sample boundary was regenerated).
+- **Caching honesty**: the config file itself is now a cache input of
+  every prepare step, so edits to tunable parameters (IoU, floor
+  defaults, buffer) trigger rebuilds instead of silently reusing stale
+  outputs.
+- **Repo hygiene**: osmnx's ./cache (8 MB of Overpass responses) was
+  being committed — now gitignored; two orphaned Phase 0 synthetic
+  files removed; check-added-large-files got --enforce-all so the 2 MB
+  guard also works on CI's fresh checkout.
+- **Synthetic sample stats** now mirror the real Taldau schema exactly
+  (same indicator names, month column).
+- **Tests**: added offline coverage for the whole download package (the
+  PBF extractor runs on the committed sample PBF; Taldau parser on a
+  canned payload; the never-overwrite guarantee for district_stats.csv;
+  Overpass endpoint rotation; Overture attribute normalization; POI-vote
+  tie rules). 104 tests, still ~6 s.
+A second correctness pass added four more fixes: slope rasters no longer
+fabricate values at DEM-nodata cells (np.gradient computes a finite
+central difference AT a NaN cell — now masked); area POIs are placed at
+`representative_point()` instead of the centroid (which falls outside
+~4% of concave footprints and mis-credits the building-function vote);
+`building=manufacture` joins the job-building POI set; and the
+completeness table keeps districts with zero buildings (flagged) instead
+of silently dropping them.
+
+Known accepted gaps (documented, not fixed): per-district completeness
+compares buildings only (Overture Places is an optional §5.2 source —
+POI counts shown for context); residual short-edge grade noise above;
+rare OSM-internal duplicates (a closed way AND a multipolygon relation
+both tagged building=*) are not de-duplicated — a tagging error in OSM
+itself, low frequency, revisit in Phase 2 if footprint sums look off.

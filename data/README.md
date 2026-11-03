@@ -5,44 +5,75 @@
 | `raw/` | Original downloads, never modified by hand | No (git-ignored) |
 | `interim/` | Cleaned, clipped, reprojected layers (GeoParquet) | No (git-ignored) |
 | `processed/` | Hex-level feature tables and model outputs | No (git-ignored) |
-| `sample/` | Small sample dataset for tests, CI and the demo | **Yes** (committed) |
+| `sample/raw/` | Small REAL data clip for tests, CI and the demo | **Yes** (committed) |
+| `sample/interim|processed/` | Generated from the sample by `prepare` | No (git-ignored) |
 
 Only open data enters this project. Internal work data (Visum models,
 zone matrices, internal surveys) must never appear here or anywhere else
 in the repository (README §13).
 
-## Registered datasets
+## Registered datasets (verified 2026-11-03)
 
-Every file placed in `raw/` gets a row here: source, download date,
-version and licence. Filled in from Phase 1 on.
+Written by `almaty-access download` into `raw/`:
 
-| File | Source | Downloaded | Version | Licence |
-|---|---|---|---|---|
-| *(none yet — Phase 1)* | | | | |
+| File | Source | Version | Licence |
+|---|---|---|---|
+| `boundary_osm.parquet` | OSM via Nominatim/Overpass (city relation 2465058, districts admin_level=6) | live | ODbL |
+| `osm_extract.osm.pbf` | Geofabrik `asia/kazakhstan-latest.osm.pbf` (~215 MB); bbox mode: Overpass export | daily | ODbL |
+| `osm_buildings/pois/landuse.parquet` | extracted from the PBF (pyosmium) | = PBF | ODbL |
+| `network_{walk,bike,drive}_*.parquet` | OSM via osmnx 2.1 (Overpass) | live | ODbL |
+| `overture_buildings.parquet` | Overture Maps buildings theme, release 2026-10-21.0, via `overturemaps` | 2026-10-21.0 | ODbL |
+| `population_r8_raw.parquet` | Kontur Population Kazakhstan, H3 r8 ([HDX](https://data.humdata.org/dataset/kontur-population-kazakhstan)) | 2023-11-01 | CC BY (Kontur) |
+| `dem.tif` | Copernicus GLO-30 COGs, AWS Open Data (tiles N43_E076, N43_E077) | GLO-30 | free, attribution required |
+| `district_stats.csv` | Bureau of National Statistics (Taldau API / stat.gov.kz) | per file | free with attribution to BNS |
 
-## Sample dataset (`sample/`)
+## District statistics (`district_stats.csv`)
 
-Currently **synthetic** data, generated deterministically from
-`config/config.yaml` (bbox in central Almaty + seeded random points):
+Long format: `district,year,month,indicator,value,unit,source,notes`.
+`almaty-access download --only stats` fetches two verified indicators
+from the Taldau API automatically when the file is absent (an existing
+file is never overwritten):
+
+- **`payroll_jobs_located`** (Taldau indicator 18935544, quarterly
+  2016–2026): payroll employees incl. small enterprises, counted at the
+  district where the enterprise reports → this is **jobs located in the
+  district**, the Phase 3 training target. Excludes individual
+  entrepreneurs and the self-employed.
+- **`employed_residents`** (indicator 702840, annual 2019–2025): from
+  the labour-force household survey → **residents of the district who
+  are employed anywhere**. NOT the same thing: central Almaly has ~250k
+  jobs but ~132k employed residents; Alatau ~63k jobs vs ~187k residents.
+
+Manual fallback: stat.gov.kz → region Almaty → «Динамические таблицы» /
+«Электронные таблицы» (see DECISIONS.md D-016 for exact tables), or the
+Taldau UI (`taldau.stat.gov.kz/ru/NewIndex/GetIndex/18935544`) which has
+an Excel export.
+
+## Sample dataset (`sample/raw/`, committed)
+
+Real data for a ~1.7 × 2.2 km bbox in the Almaly core, rebuilt with:
 
 ```
-uv run almaty-access sample
+uv run almaty-access sample          # needs network
+uv run almaty-access prepare -c config/config.sample.yaml
 ```
 
-| File | Schema | CRS |
-|---|---|---|
-| `boundary.parquet` | `name` (str), `geometry` (1 polygon = sample bbox) | EPSG:4326 |
-| `poi_points.parquet` | `category` (str), `weight` (float), `geometry` (points) | EPSG:4326 |
+Same file names and schemas as the real `raw/` (see
+`src/almaty_access/schemas.py`), so tests exercise the actual pipeline
+code offline. Exception: `district_stats.csv` in the sample is
+**synthetic** (`source=synthetic-for-tests`) — real statistics are never
+fabricated. OSM-derived sample files are ODbL, the population clip CC BY
+(Kontur), the DEM clip Copernicus (attribution below).
 
-The synthetic sample is released under **CC0** (it contains no upstream
-data). In Phase 1 it is extended with schema-faithful clips of the real
-layers for one district; those files will carry their upstream licences
-(e.g. ODbL for OSM-derived layers, with attribution).
+## Attribution
 
-## Licence notes for upstream sources
-
-- **OpenStreetMap** (ODbL): requires attribution ("© OpenStreetMap
-  contributors") and share-alike for derived databases.
-- **Overture Maps / Microsoft Building Footprints** (ODbL / CDLA-type).
-- **Kontur / GHSL / WorldPop population** (CC BY): requires attribution.
-- Exact terms are recorded per file in the table above when downloaded.
+- **OpenStreetMap** (and OSM-derived layers, Overture buildings):
+  © OpenStreetMap contributors, ODbL. Overture: "Overture Maps
+  Foundation, overturemaps.org".
+- **Kontur Population**: © Kontur, CC BY.
+- **Copernicus GLO-30 DEM**: © DLR e.V. 2010-2014 and © Airbus Defence
+  and Space GmbH 2014-2018 provided under COPERNICUS by the European
+  Union and ESA; all rights reserved.
+- **Official statistics**: Bureau of National Statistics of the Agency
+  for Strategic Planning and Reforms of the Republic of Kazakhstan
+  (stat.gov.kz / taldau.stat.gov.kz).

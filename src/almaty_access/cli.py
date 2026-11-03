@@ -1,14 +1,17 @@
 """Command-line interface: ``almaty-access``.
 
-Each sub-command is one pipeline stage (README §6-§7). Stages are
-implemented phase by phase; a stage that is not built yet validates the
-configuration, then exits with code 2 and points at its phase, instead
-of pretending to work or failing silently.
+Each sub-command is one pipeline stage (README §6-§7). ``download`` and
+``prepare`` are real since Phase 1 and run their steps in dependency
+order with make-style caching (``--force`` rebuilds, ``--only`` selects
+steps). Stages of later phases validate the configuration, then exit
+with code 2 and point at their phase. Exit codes: 0 success, 1 config
+or pipeline error, 2 stage not implemented yet.
 """
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated
 
@@ -16,8 +19,19 @@ import typer
 
 from almaty_access import __version__
 from almaty_access.config import Config, load_config, seed_everything
+from almaty_access.download import buildings as dl_buildings
+from almaty_access.download import dem as dl_dem
+from almaty_access.download import osm as dl_osm
+from almaty_access.download import population as dl_population
+from almaty_access.download import stats as dl_stats
 from almaty_access.log import setup_logging
-from almaty_access.sample import build_sample
+from almaty_access.prepare import boundary as prep_boundary
+from almaty_access.prepare import buildings as prep_buildings
+from almaty_access.prepare import completeness as prep_completeness
+from almaty_access.prepare import dem as prep_dem
+from almaty_access.prepare import network as prep_network
+from almaty_access.prepare import pois as prep_pois
+from almaty_access.prepare import population as prep_population
 
 app = typer.Typer(
     name="almaty-access",
@@ -32,18 +46,39 @@ app = typer.Typer(
 logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG = Path("config") / "config.yaml"
+SAMPLE_CONFIG = Path("config") / "config.sample.yaml"
 
 ConfigOpt = Annotated[Path, typer.Option("--config", "-c", help="Path to config.yaml.")]
 VerboseOpt = Annotated[bool, typer.Option("--verbose", "-v", help="Enable debug logging.")]
+ForceOpt = Annotated[bool, typer.Option("--force", help="Rebuild even when outputs look fresh.")]
+OnlyOpt = Annotated[
+    list[str] | None,
+    typer.Option("--only", help="Run only the named step(s); repeatable."),
+]
 
-_PHASE_OF_STAGE = {
-    "download": 1,
-    "prepare": 1,
-    "features": 2,
-    "model": 3,
-    "access": 4,
-    "equity": 5,
-    "report": 8,
+_PHASE_OF_STAGE = {"features": 2, "model": 3, "access": 4, "equity": 5, "report": 8}
+
+StepFunc = Callable[..., object]
+
+DOWNLOAD_STEPS: dict[str, StepFunc] = {
+    "boundary": dl_osm.download_boundary,
+    "extract": dl_osm.download_osm_extract,
+    "layers": dl_osm.extract_osm_layers,
+    "networks": dl_osm.download_networks,
+    "overture": dl_buildings.download_overture_buildings,
+    "population": dl_population.download_population,
+    "dem": dl_dem.download_dem,
+    "stats": dl_stats.ensure_district_stats,
+}
+
+PREPARE_STEPS: dict[str, StepFunc] = {
+    "boundary": prep_boundary.prepare_boundary,
+    "dem": prep_dem.prepare_dem,
+    "pois": prep_pois.prepare_pois,
+    "buildings": prep_buildings.prepare_buildings,
+    "population": prep_population.prepare_population,
+    "network": prep_network.prepare_networks,
+    "completeness": prep_completeness.prepare_completeness,
 }
 
 
@@ -70,12 +105,43 @@ def _load_and_seed(config_path: Path, verbose: bool) -> Config:
     return config
 
 
+def _run_steps(
+    steps: dict[str, StepFunc],
+    config: Config,
+    *,
+    only: list[str] | None,
+    force: bool,
+    verbose: bool,
+) -> None:
+    if only:
+        unknown = [name for name in only if name not in steps]
+        if unknown:
+            typer.secho(
+                f"unknown step(s): {', '.join(unknown)}; available: {', '.join(steps)}",
+                fg=typer.colors.RED,
+                err=True,
+            )
+            raise typer.Exit(code=1)
+        selected = {name: func for name, func in steps.items() if name in set(only)}
+    else:
+        selected = steps
+    for name, func in selected.items():
+        typer.secho(f"[{name}]", fg=typer.colors.CYAN)
+        try:
+            func(config, force=force)
+        except Exception as exc:
+            if verbose:
+                logger.exception("step '%s' failed", name)
+            typer.secho(f"step '{name}' failed: {exc}", fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=1) from exc
+
+
 def _exit_not_implemented(stage: str) -> None:
     """Report that a stage belongs to a later phase and exit with code 2."""
     phase = _PHASE_OF_STAGE[stage]
     typer.secho(
         f"'{stage}' is not implemented yet: it arrives in Phase {phase} (README section 7). "
-        "Available today: info, sample.",
+        "Available today: info, sample, download, prepare.",
         fg=typer.colors.YELLOW,
     )
     raise typer.Exit(code=2)
@@ -104,6 +170,9 @@ def info(config: ConfigOpt = DEFAULT_CONFIG, verbose: VerboseOpt = False) -> Non
     lines = [
         f"almaty-access {__version__}",
         f"study area       : {cfg.study_area} (+{cfg.buffer_km:g} km buffer)",
+        "area mode        : "
+        + (f"bbox {cfg.area.bbox}" if cfg.area.bbox else f"place: {cfg.area.place}"),
+        f"districts        : {len(cfg.districts)}",
         f"metric CRS       : {cfg.crs.metric}",
         f"storage CRS      : {cfg.crs.storage}",
         f"H3 resolutions   : analysis={cfg.h3.analysis_resolution}, fine={cfg.h3.fine_resolution}",
@@ -124,33 +193,56 @@ def info(config: ConfigOpt = DEFAULT_CONFIG, verbose: VerboseOpt = False) -> Non
 
 
 @app.command()
-def sample(
+def download(
     config: ConfigOpt = DEFAULT_CONFIG,
-    out: Annotated[
-        Path | None,
-        typer.Option("--out", help="Output directory (default: paths.sample from config)."),
-    ] = None,
+    only: OnlyOpt = None,
+    force: ForceOpt = False,
     verbose: VerboseOpt = False,
 ) -> None:
-    """(Re)build the synthetic sample dataset used by tests and CI."""
+    """Download raw open datasets into data/raw/ (cached). [Phase 1]
+
+    Steps in order: boundary, extract (PBF), layers (buildings/POIs/
+    landuse), networks (walk/bike/drive), overture, population, dem,
+    stats (validates the manually collected district CSV).
+    """
     cfg = _load_and_seed(config, verbose)
-    written = build_sample(cfg, out_dir=out)
-    for name, path in written.items():
-        typer.echo(f"wrote {name}: {path}")
+    _run_steps(DOWNLOAD_STEPS, cfg, only=only, force=force, verbose=verbose)
 
 
 @app.command()
-def download(config: ConfigOpt = DEFAULT_CONFIG, verbose: VerboseOpt = False) -> None:
-    """Download raw open datasets: OSM, buildings, population, DEM. [Phase 1]"""
-    _load_and_seed(config, verbose)
-    _exit_not_implemented("download")
+def prepare(
+    config: ConfigOpt = DEFAULT_CONFIG,
+    only: OnlyOpt = None,
+    force: ForceOpt = False,
+    verbose: VerboseOpt = False,
+) -> None:
+    """Clean, clip and derive layers into data/interim/ (cached). [Phase 1]
+
+    Steps in order: boundary, dem, pois, buildings, population, network,
+    completeness.
+    """
+    cfg = _load_and_seed(config, verbose)
+    _run_steps(PREPARE_STEPS, cfg, only=only, force=force, verbose=verbose)
 
 
 @app.command()
-def prepare(config: ConfigOpt = DEFAULT_CONFIG, verbose: VerboseOpt = False) -> None:
-    """Clean, clip and reproject raw layers into data/interim/. [Phase 1]"""
-    _load_and_seed(config, verbose)
-    _exit_not_implemented("prepare")
+def sample(
+    config: ConfigOpt = SAMPLE_CONFIG,
+    force: ForceOpt = False,
+    verbose: VerboseOpt = False,
+) -> None:
+    """Rebuild the committed sample dataset from live sources (needs network).
+
+    Uses config/config.sample.yaml (bbox in central Almaty, paths under
+    data/sample/). Writes synthetic district stats, then runs the same
+    download steps as the real pipeline. Tests and CI only READ the
+    committed result; they never run this.
+    """
+    cfg = _load_and_seed(config, verbose)
+    typer.secho("[stats:synthetic]", fg=typer.colors.CYAN)
+    dl_stats.write_synthetic_stats(cfg)
+    _run_steps(DOWNLOAD_STEPS, cfg, only=None, force=force, verbose=verbose)
+    typer.echo("sample raw data rebuilt; run `almaty-access prepare -c config/config.sample.yaml`")
 
 
 @app.command()

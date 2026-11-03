@@ -9,13 +9,18 @@ dist/
 .ruff_cache/
 
 # Data: raw and intermediate files never go into git (README §5.3).
-# Only the small committed sample in data/sample/ is tracked.
+# Only the small committed sample in data/sample/raw is tracked.
 data/raw/*
 data/interim/*
 data/processed/*
 !data/raw/.gitkeep
 !data/interim/.gitkeep
 !data/processed/.gitkeep
+data/sample/interim/
+data/sample/processed/
+# the Kontur country file is a large cached download, never committed
+kontur_population_country.gpkg*
+*.part
 
 # Notebooks
 .ipynb_checkpoints/
@@ -28,3 +33,6 @@ Thumbs.db
 
 # Logs and local scratch
 *.log
+
+# osmnx Overpass response cache (created in the working directory)
+cache/

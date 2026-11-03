@@ -39,3 +39,6 @@ jobs:
         run: |
           uv run almaty-access --help
           uv run almaty-access info
+
+      - name: Prepare pipeline on the committed sample (offline)
+        run: uv run almaty-access prepare -c config/config.sample.yaml -v

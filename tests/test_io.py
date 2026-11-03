@@ -98,6 +98,24 @@ def test_ensure_built_runs_once_then_skips(tmp_path: Path) -> None:
     assert len(calls) == 2
 
 
+def test_ensure_built_multiple_outputs(tmp_path: Path) -> None:
+    """A step with several outputs rebuilds when ANY of them is missing."""
+    source = tmp_path / "in.txt"
+    source.write_text("x")
+    _set_age(source, seconds_ago=60)
+    out_a = tmp_path / "a.txt"
+    out_b = tmp_path / "b.txt"
+
+    def build() -> None:
+        out_a.write_text("a")
+        out_b.write_text("b")
+
+    assert ensure_built([out_a, out_b], [source], build) is True
+    assert ensure_built([out_a, out_b], [source], build) is False
+    out_b.unlink()
+    assert ensure_built([out_a, out_b], [source], build) is True
+
+
 def test_ensure_built_force_still_requires_inputs(tmp_path: Path) -> None:
     """force=True must not bypass the missing-input check."""
     with pytest.raises(FileNotFoundError, match="missing input"):

@@ -16,8 +16,6 @@ PIPELINE_COMMANDS = ("download", "prepare", "features", "model", "access", "equi
 UTILITY_COMMANDS = ("info", "sample")
 
 STAGE_PHASES = {
-    "download": 1,
-    "prepare": 1,
     "features": 2,
     "model": 3,
     "access": 4,
@@ -51,11 +49,18 @@ def test_info_prints_config_summary(config_path: Path) -> None:
     assert "random seed" in result.output
 
 
-@pytest.mark.parametrize("stage", PIPELINE_COMMANDS)
+@pytest.mark.parametrize("stage", sorted(STAGE_PHASES))
 def test_unimplemented_stage_exits_with_phase_pointer(config_path: Path, stage: str) -> None:
     result = runner.invoke(app, [stage, "--config", str(config_path)])
     assert result.exit_code == 2
     assert f"Phase {STAGE_PHASES[stage]}" in result.output
+
+
+def test_download_rejects_unknown_step(config_path: Path) -> None:
+    result = runner.invoke(app, ["download", "--config", str(config_path), "--only", "bogus"])
+    assert result.exit_code == 1
+    assert "unknown step" in result.output
+    assert "boundary" in result.output  # lists the available steps
 
 
 def test_bad_config_exits_cleanly_with_code_1(tmp_path: Path) -> None:
@@ -73,9 +78,7 @@ def test_missing_config_exits_cleanly_with_hint(tmp_path: Path) -> None:
     assert "Hint" in result.output
 
 
-def test_sample_command_writes_to_out_dir(config_path: Path, tmp_path: Path) -> None:
-    out_dir = tmp_path / "sample"
-    result = runner.invoke(app, ["sample", "--config", str(config_path), "--out", str(out_dir)])
+def test_help_mentions_sample_rebuild() -> None:
+    result = runner.invoke(app, ["sample", "--help"])
     assert result.exit_code == 0
-    assert (out_dir / "boundary.parquet").exists()
-    assert (out_dir / "poi_points.parquet").exists()
+    assert "config.sample.yaml" in result.output.replace("\n", "")

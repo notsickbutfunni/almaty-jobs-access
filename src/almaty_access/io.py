@@ -67,47 +67,53 @@ def needs_rebuild(output: str | Path, inputs: Sequence[str | Path]) -> bool:
 
 
 def ensure_built(
-    output: str | Path,
+    outputs: str | Path | Sequence[str | Path],
     inputs: Sequence[str | Path],
     build: Callable[[], None],
     *,
     force: bool = False,
 ) -> bool:
-    """Run ``build()`` unless ``output`` is already up to date.
+    """Run ``build()`` unless every output is already up to date.
 
     This is the caching convention used by every pipeline step: wrap the
     expensive work in a zero-argument ``build`` callable and let this
-    function decide whether it needs to run.
+    function decide whether it needs to run. A step may produce several
+    files; it is rebuilt when ANY of them is missing or stale.
 
     Parameters
     ----------
-    output:
-        The file the step is expected to produce.
+    outputs:
+        The file (or files) the step is expected to produce.
     inputs:
-        Files the output depends on; all must exist.
+        Files the outputs depend on; all must exist.
     build:
-        Zero-argument callable that creates ``output``.
+        Zero-argument callable that creates all outputs.
     force:
-        If True, rebuild even when the output looks fresh.
+        If True, rebuild even when the outputs look fresh.
 
     Returns
     -------
     bool
-        True when ``build`` ran, False when the cached output was kept.
+        True when ``build`` ran, False when the cached outputs were kept.
 
     Raises
     ------
     RuntimeError
-        If ``build`` completes without producing ``output``.
+        If ``build`` completes without producing every output.
     """
-    output = Path(output)
+    output_paths = (
+        [Path(outputs)] if isinstance(outputs, (str, Path)) else [Path(p) for p in outputs]
+    )
+    if not output_paths:
+        raise ValueError("ensure_built needs at least one output path")
     # Always evaluated, even with force=True: inputs must exist either way.
-    stale = needs_rebuild(output, inputs)
+    stale = any(needs_rebuild(output, inputs) for output in output_paths)
     if not force and not stale:
-        logger.info("up to date, skipping: %s", output.name)
+        logger.info("up to date, skipping: %s", ", ".join(p.name for p in output_paths))
         return False
-    logger.info("building: %s", output.name)
+    logger.info("building: %s", ", ".join(p.name for p in output_paths))
     build()
-    if not output.exists():
-        raise RuntimeError(f"build step finished but did not produce {output}")
+    missing = [str(p) for p in output_paths if not p.exists()]
+    if missing:
+        raise RuntimeError(f"build step finished but did not produce: {', '.join(missing)}")
     return True

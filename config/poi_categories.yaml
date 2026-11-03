@@ -1,0 +1,111 @@
+# OSM tag -> POI category mapping (README §7 Phase 1).
+#
+# Rules are evaluated top to bottom; the FIRST matching rule wins, so
+# specific categories (grocery, finance) must come before catch-alls
+# (retail_other, office). values: "*" matches any non-empty value of the
+# key. Keys refer to columns of data/raw/osm_pois.parquet (schemas.py).
+#
+# 18 categories covering the job-relevant and service-relevant POI types.
+
+categories:
+  - category: grocery
+    rules:
+      - { key: shop, values: [supermarket, convenience, grocery, greengrocer, butcher, dairy, bakery, beverages] }
+
+  - category: market
+    rules:
+      - { key: amenity, values: [marketplace] }
+
+  - category: finance
+    rules:
+      - { key: amenity, values: [bank, bureau_de_change, atm] }
+      - { key: office, values: [financial, insurance] }
+
+  - category: food_service
+    rules:
+      - { key: amenity, values: [restaurant, cafe, fast_food, bar, pub, food_court, ice_cream] }
+
+  - category: education_kindergarten
+    rules:
+      - { key: amenity, values: [kindergarten, childcare] }
+
+  - category: education_school
+    rules:
+      - { key: amenity, values: [school] }
+
+  - category: education_university
+    rules:
+      - { key: amenity, values: [university, college] }
+
+  - category: health_hospital
+    rules:
+      - { key: amenity, values: [hospital] }
+      - { key: healthcare, values: [hospital] }
+
+  # Pharmacy must precede health_clinic: pharmacies routinely carry a
+  # healthcare=pharmacy co-tag that the clinic wildcard would swallow.
+  - category: pharmacy
+    rules:
+      - { key: amenity, values: [pharmacy] }
+      - { key: healthcare, values: [pharmacy] }
+
+  - category: health_clinic
+    rules:
+      - { key: amenity, values: [clinic, doctors, dentist] }
+      - { key: healthcare, values: "*" }
+
+  - category: hotel
+    rules:
+      - { key: tourism, values: [hotel, hostel, guest_house, motel, apartment] }
+
+  - category: culture_leisure
+    rules:
+      - { key: amenity, values: [theatre, cinema, library, community_centre, arts_centre, nightclub] }
+      - { key: leisure, values: [fitness_centre, sports_centre, stadium, swimming_pool, bowling_alley] }
+      - { key: tourism, values: [museum, gallery, attraction, zoo] }
+
+  - category: public_institution
+    rules:
+      - { key: amenity, values: [townhall, courthouse, police, fire_station, post_office, embassy, social_facility, public_building] }
+      - { key: office, values: [government, diplomatic] }
+
+  - category: religious
+    rules:
+      - { key: amenity, values: [place_of_worship] }
+
+  # Platforms (where passengers wait) approximate physical stops; OSM's
+  # PTv2 scheme also tags a stop_position on the road/track for the same
+  # stop, which would double-count it, so stop_position is NOT matched.
+  # Subway entrances are access points, not stops (several per station).
+  - category: transit_stop
+    rules:
+      - { key: public_transport, values: [platform, station] }
+      - { key: highway, values: [bus_stop] }
+      - { key: railway, values: [station, halt, tram_stop] }
+
+  - category: fuel_auto
+    rules:
+      - { key: amenity, values: [fuel, car_wash, car_rental] }
+      - { key: shop, values: [car, car_repair, car_parts, tyres] }
+
+  - category: industrial
+    rules:
+      - { key: industrial, values: "*" }
+      - { key: man_made, values: [works, factory] }
+      - { key: building, values: [industrial, warehouse, manufacture] }
+
+  - category: craft
+    rules:
+      - { key: craft, values: "*" }
+
+  # Catch-alls last: anything with an office tag, then any remaining shop,
+  # then the job-relevant building types from README §7 Phase 1.
+  - category: office
+    rules:
+      - { key: office, values: "*" }
+      - { key: building, values: [office, commercial] }
+
+  - category: retail_other
+    rules:
+      - { key: shop, values: "*" }
+      - { key: building, values: [retail] }
