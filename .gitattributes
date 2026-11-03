@@ -1,0 +1,12 @@
+# Normalize line endings: LF in the repo, so Windows and Linux (CI) agree.
+* text=auto eol=lf
+
+# Binary formats: never touch line endings.
+*.parquet binary
+*.pbf binary
+*.tif binary
+*.tiff binary
+*.png binary
+*.jpg binary
+*.gpkg binary
+*.zip binary

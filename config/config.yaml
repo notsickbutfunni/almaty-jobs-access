@@ -1,0 +1,50 @@
+# Central configuration for the Almaty Jobs & Accessibility Lab.
+# Single source of truth: pipeline code reads these values through
+# almaty_access.config.load_config() and never hard-codes them.
+
+project:
+  study_area: "Almaty, Kazakhstan"
+  # Buffer around the city boundary so access near the edge is not cut
+  # artificially (edge effect, README §4).
+  buffer_km: 5.0
+
+crs:
+  # Projected CRS (meters) for ALL distance and area calculations.
+  metric: "EPSG:32643" # WGS 84 / UTM zone 43N
+  # Geographic CRS (degrees) for storage and web maps only.
+  storage: "EPSG:4326"
+
+h3:
+  # Main analysis unit (~0.74 km2 per hex).
+  analysis_resolution: 8
+  # Fine maps and walking analysis (~0.105 km2 per hex).
+  fine_resolution: 9
+
+travel:
+  # Cumulative-opportunity time thresholds, minutes.
+  thresholds_min: [15, 30, 45, 60]
+  # Flat-ground speeds, km/h. Slope adjustments arrive in Phase 4
+  # (Tobler's hiking function for walk, uphill penalty for bike).
+  speeds_kmh:
+    walk: 4.8
+    bike: 15.0
+  # Weekday morning peak used for transit travel times (Phase 4).
+  departure_window: ["07:00", "09:00"]
+
+paths:
+  # Relative to the repository root (the folder that contains config/).
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed
+  sample: data/sample
+  figures: reports/figures
+
+# Synthetic sample dataset used by tests and CI (offline, deterministic).
+# A small bbox in central Almaty (roughly the Almaly district core),
+# [min_lon, min_lat, max_lon, max_lat] in EPSG:4326.
+sample:
+  bbox: [76.89, 43.22, 76.97, 43.28]
+  n_points: 200
+
+# Used to seed every random number generator in the project.
+random_seed: 42

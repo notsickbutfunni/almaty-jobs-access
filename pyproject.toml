@@ -1,0 +1,59 @@
+[project]
+name = "almaty-access"
+version = "0.1.0"
+description = "Almaty Jobs & Accessibility Lab: open-data job density and accessibility analysis on an H3 grid."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+keywords = ["geospatial", "accessibility", "h3", "almaty", "transport"]
+dependencies = [
+    "typer>=0.12",
+    "pyyaml>=6.0",
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "geopandas>=1.0",
+    "shapely>=2.0",
+    "pyproj>=3.6",
+    "pyarrow>=16",
+    "h3>=4.0,<5",
+]
+
+[project.scripts]
+almaty-access = "almaty_access.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.8",
+    "pre-commit>=3.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/almaty_access"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort (import order)
+    "UP",  # pyupgrade (modern syntax)
+    "B",   # bugbear (likely bugs)
+    "RUF", # ruff-specific rules
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["almaty_access"]
