@@ -42,3 +42,6 @@ jobs:
 
       - name: Prepare pipeline on the committed sample (offline)
         run: uv run almaty-access prepare -c config/config.sample.yaml -v
+
+      - name: Feature build on the committed sample (offline)
+        run: uv run almaty-access features -c config/config.sample.yaml -v

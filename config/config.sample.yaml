@@ -63,4 +63,31 @@ buildings:
 pois:
   categories_file: config/poi_categories.yaml
 
+# Mirrors config/config.yaml; betweenness_k and the sub-centre search
+# are scaled down to the sample's tiny network and POI set.
+features:
+  center: { lat: 43.2586, lon: 76.9532 }
+  large_gfa_m2: 2000
+  betweenness_k: 50
+  subcenters:
+    eps_m: 300
+    min_samples: 8
+    max_centers: 2
+  log1p_prefixes:
+    - bf_gfa_
+    - bf_footprint
+    - bf_bldg
+    - poi_cnt_
+    - poi_density
+    - net_len_
+    - net_intersection
+    - tr_stop
+    - pop_residents
+    - pop_density
+    - ctx_
+  context_columns:
+    [bf_gfa_m2, bf_gfa_commercial_m2, bf_gfa_industrial_m2, poi_cnt_total, pop_residents]
+  context_k: [1, 2]
+  corr_threshold: 0.95
+
 random_seed: 42

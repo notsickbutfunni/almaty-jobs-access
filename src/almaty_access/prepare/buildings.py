@@ -123,9 +123,27 @@ POI_CATEGORY_FUNCTION: dict[str, str] = {
 
 #: Structures that are not occupiable floor space: kept out of the layer
 #: entirely, so they contribute neither GFA nor footprint features.
+#: "no" is OSM's explicit NOT-a-building marker — without it the Almaty
+#: TV tower (building=no, height 371.5 m) became a phantom 124-storey
+#: public building worth 60,000 m² of GFA.
 NON_OCCUPIABLE_TAGS = frozenset(
-    {"roof", "bridge", "construction", "ruins", "proposed", "razed", "demolished", "collapsed"}
+    {
+        "no",
+        "roof",
+        "bridge",
+        "construction",
+        "ruins",
+        "proposed",
+        "razed",
+        "demolished",
+        "collapsed",
+    }
 )
+
+#: Height-derived floor counts above this are almost certainly masts or
+#: antenna structures, not floor space; they are logged for inspection
+#: (Almaty's tallest occupied building has ~37 floors).
+SUSPICIOUS_LEVELS = 55.0
 
 #: landuse=<value> -> function (used for the centroid fallback).
 LANDUSE_FUNCTION: dict[str, str] = {
@@ -310,6 +328,14 @@ def estimate_levels(
     source = source.mask(use_default, "default")
 
     levels = levels.clip(lower=1.0).round(1)
+    suspicious = levels > SUSPICIOUS_LEVELS
+    if suspicious.any():
+        logger.warning(
+            "%d buildings with > %.0f estimated floors (max %.1f) — check for masts/antennas",
+            int(suspicious.sum()),
+            SUSPICIOUS_LEVELS,
+            float(levels.max()),
+        )
     return levels, source
 
 

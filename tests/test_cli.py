@@ -16,7 +16,6 @@ PIPELINE_COMMANDS = ("download", "prepare", "features", "model", "access", "equi
 UTILITY_COMMANDS = ("info", "sample")
 
 STAGE_PHASES = {
-    "features": 2,
     "model": 3,
     "access": 4,
     "equity": 5,
@@ -82,3 +81,27 @@ def test_help_mentions_sample_rebuild() -> None:
     result = runner.invoke(app, ["sample", "--help"])
     assert result.exit_code == 0
     assert "config.sample.yaml" in result.output.replace("\n", "")
+
+
+def test_features_with_missing_inputs_exits_cleanly(tmp_path: Path) -> None:
+    """`features` is implemented since Phase 2: without the interim layers
+    it must fail with a clean exit-1 message, not a traceback or code 2."""
+    import yaml
+
+    repo_root = Path(__file__).resolve().parents[1]  # keep the test cwd-independent
+    source = repo_root / "config" / "config.sample.yaml"
+    raw = yaml.safe_load(source.read_text(encoding="utf-8-sig"))
+    raw["pois"]["categories_file"] = str(repo_root / "config" / "poi_categories.yaml")
+    raw["paths"] = {
+        "raw": str(tmp_path / "raw"),
+        "interim": str(tmp_path / "interim"),
+        "processed": str(tmp_path / "processed"),
+        "sample": str(tmp_path / "sample"),
+        "figures": str(tmp_path / "figures"),
+    }
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(yaml.safe_dump(raw, allow_unicode=True), encoding="utf-8")
+
+    result = runner.invoke(app, ["features", "--config", str(config_file)])
+    assert result.exit_code == 1
+    assert "failed" in result.output

@@ -83,5 +83,51 @@ buildings:
 pois:
   categories_file: config/poi_categories.yaml
 
+# Phase 2 feature engineering (README §7 Phase 2).
+features:
+  # Historic centre: Ascension Cathedral in Panfilov Park, the core of
+  # old Verny. Distances go from hex centroids to this point.
+  center: { lat: 43.2586, lon: 76.9532 }
+  # A building whose GFA exceeds this is "large" (README: share of
+  # large buildings > 2,000 m2).
+  large_gfa_m2: 2000
+  # Sampled betweenness centrality on the drive network: number of
+  # source nodes (capped at the node count), seeded with random_seed.
+  betweenness_k: 500
+  # Job sub-centres: DBSCAN over business POIs in the metric CRS.
+  # Clusters are ranked by POI count; the one nearest the historic
+  # centre is the centre itself and is excluded.
+  subcenters:
+    eps_m: 400
+    min_samples: 40
+    max_centers: 5
+  # Counts and areas are heavy-tailed; log1p is applied at MODEL time
+  # to every feature whose name starts with one of these prefixes.
+  # Deliberately narrow: shares (bf_share_*), floor statistics
+  # (bf_levels_*) and ratios (pop_per_*) are bounded and must NOT be
+  # log-transformed. The feature tables keep raw values;
+  # features_report.json records the expanded column list.
+  log1p_prefixes:
+    - bf_gfa_
+    - bf_footprint
+    - bf_bldg
+    - poi_cnt_
+    - poi_density
+    - net_len_
+    - net_intersection
+    - tr_stop
+    - pop_residents
+    - pop_density
+    - ctx_
+  # Features that get k-ring neighbourhood context (sums and means over
+  # H3 disks, README: job clusters spill over hex borders).
+  context_columns:
+    [bf_gfa_m2, bf_gfa_commercial_m2, bf_gfa_industrial_m2, poi_cnt_total, pop_residents]
+  context_k: [1, 2]
+  # Of each feature pair with |r| above this (on the log-transformed r8
+  # table) the later column is dropped; the same drop list is applied
+  # to r9 so both tables keep identical columns.
+  corr_threshold: 0.95
+
 # Used to seed every random number generator in the project.
 random_seed: 42

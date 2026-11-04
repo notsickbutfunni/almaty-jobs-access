@@ -45,6 +45,13 @@ def test_repo_config_is_valid(repo_config: Config) -> None:
     assert set(repo_config.buildings.default_levels) >= {"residential", "unknown"}
     assert repo_config.pois.categories_file.exists()
     assert repo_config.sources.geofabrik_pbf_url.startswith("https://")
+    assert 43 < repo_config.features.center_lat < 44  # inside Almaty
+    assert 76 < repo_config.features.center_lon < 78
+    assert repo_config.features.large_gfa_m2 == pytest.approx(2000.0)
+    assert repo_config.features.subcenters.eps_m > 0
+    assert repo_config.features.context_k == (1, 2)
+    assert 0 < repo_config.features.corr_threshold <= 1
+    assert all(prefix for prefix in repo_config.features.log1p_prefixes)
 
 
 def test_paths_resolve_against_repo_root(repo_config: Config, config_path: Path) -> None:
@@ -119,6 +126,18 @@ INVALID_CASES = [
     pytest.param(_set("random_seed", 2**40), id="seed-above-numpy-max"),
     pytest.param(_set("random_seed", "42"), id="seed-not-int"),
     pytest.param(_delete("paths.interim"), id="path-missing"),
+    pytest.param(_set("features.center.lat", 100), id="center-lat-out-of-range"),
+    pytest.param(_set("features.center", [43.2, 76.9]), id="center-not-a-mapping"),
+    pytest.param(_set("features.large_gfa_m2", 0), id="large-gfa-zero"),
+    pytest.param(_set("features.betweenness_k", 0), id="betweenness-k-zero"),
+    pytest.param(_set("features.subcenters.min_samples", 0), id="subcenter-min-samples-zero"),
+    pytest.param(_set("features.subcenters.eps_m", -5), id="subcenter-eps-negative"),
+    pytest.param(_set("features.log1p_prefixes", []), id="log1p-prefixes-empty"),
+    pytest.param(_set("features.log1p_prefixes", ["bf_", "bf_"]), id="log1p-prefixes-duplicate"),
+    pytest.param(_set("features.context_columns", [""]), id="context-columns-empty-string"),
+    pytest.param(_set("features.context_k", [2, 1]), id="context-k-not-increasing"),
+    pytest.param(_set("features.corr_threshold", 1.5), id="corr-threshold-above-one"),
+    pytest.param(_delete("features"), id="features-section-missing"),
 ]
 
 

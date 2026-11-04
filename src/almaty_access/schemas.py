@@ -34,8 +34,13 @@ POI_TAG_KEYS: tuple[str, ...] = (
     "building",
 )
 
-#: data/raw/osm_pois.parquet — point geometry (polygon POIs → centroid).
-RAW_OSM_POIS = ("osm_id", "name", *POI_TAG_KEYS, "geometry")
+#: Tag keys stored as POI columns but NOT used to decide whether an
+#: element is a POI (a bare station=* without railway=* is mapping noise).
+#: station=subway separates metro stations from heavy-rail ones.
+POI_EXTRA_KEYS: tuple[str, ...] = ("station",)
+
+#: data/raw/osm_pois.parquet — point geometry (polygon POIs → representative point).
+RAW_OSM_POIS = ("osm_id", "name", *POI_TAG_KEYS, *POI_EXTRA_KEYS, "geometry")
 
 #: data/raw/osm_buildings.parquet — polygon geometry.
 RAW_OSM_BUILDINGS = (
@@ -85,7 +90,9 @@ INTERIM_BOUNDARY = ("name", "geometry")
 INTERIM_DISTRICTS = ("district", "name_osm", "area_km2", "geometry")
 
 #: pois.parquet — categorized, deduplicated, clipped to the buffer.
-INTERIM_POIS = ("osm_id", "name", "category", "geometry")
+#: railway/station ride along for the Phase 2 transit features
+#: (railway=station + station=subway identifies metro stations).
+INTERIM_POIS = ("osm_id", "name", "category", "railway", "station", "geometry")
 
 #: buildings.parquet — merged OSM+Overture with floors, function and GFA.
 INTERIM_BUILDINGS = (
@@ -110,3 +117,25 @@ INTERIM_NETWORK_EDGES = ("u", "v", "key", "length_m", "highway", "grade", "geome
 
 #: Building functions the classifier may assign.
 BUILDING_FUNCTIONS = ("residential", "commercial", "industrial", "public", "unknown")
+
+# ---------------------------------------------------------------------------
+# Processed layers (data/processed/, written by `almaty-access features`)
+# ---------------------------------------------------------------------------
+
+#: grid_r{res}.parquet — the study grid, one row per hex whose centroid
+#: lies inside the buffered boundary (∩ area.bbox when one is set).
+#: district is the largest-overlap district (NA in the buffer ring);
+#: district_share is that district's share of the hex area.
+PROCESSED_GRID = ("h3", "res", "district", "district_share", "in_city", "geometry")
+
+#: features_r{res}.parquet — plain parquet, NO geometry (join grid_r{res}
+#: on h3 for maps). First the identifier columns, then only feature
+#: columns, each named with a group prefix.
+FEATURE_ID_COLUMNS = ("h3", "res", "district", "in_city")
+FEATURE_PREFIXES = ("bf_", "poi_", "lu_", "net_", "tr_", "pop_", "cent_", "ter_", "ctx_")
+
+#: subcenters.parquet — POI-cluster job sub-centres (point geometry).
+#: in_city=False marks a buffer-zone cluster (satellite town): eligible
+#: as a distance target (real jobs for edge hexes) but not an Almaty
+#: sub-centre in the administrative sense.
+PROCESSED_SUBCENTERS = ("subcenter_id", "n_pois", "in_city", "geometry")

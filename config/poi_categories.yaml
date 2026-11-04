@@ -5,7 +5,7 @@
 # (retail_other, office). values: "*" matches any non-empty value of the
 # key. Keys refer to columns of data/raw/osm_pois.parquet (schemas.py).
 #
-# 18 categories covering the job-relevant and service-relevant POI types.
+# 20 categories covering the job-relevant and service-relevant POI types.
 
 categories:
   - category: grocery

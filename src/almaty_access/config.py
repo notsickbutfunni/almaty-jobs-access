@@ -139,6 +139,36 @@ class PoisConfig:
 
 
 @dataclass(frozen=True)
+class SubcentersConfig:
+    """DBSCAN parameters for finding job sub-centres from business POIs."""
+
+    eps_m: float
+    min_samples: int
+    max_centers: int
+
+
+@dataclass(frozen=True)
+class FeaturesConfig:
+    """Phase 2 feature-engineering parameters (README §7 Phase 2)."""
+
+    center_lat: float
+    center_lon: float
+    """Historic centre; distance features are measured from hex centroids."""
+    large_gfa_m2: float
+    """Buildings with GFA above this count as 'large'."""
+    betweenness_k: int
+    """Number of sampled sources for betweenness centrality (capped at n)."""
+    subcenters: SubcentersConfig
+    log1p_prefixes: tuple[str, ...]
+    """Feature-name prefixes whose columns get log1p at model time."""
+    context_columns: tuple[str, ...]
+    """Features that receive k-ring neighbourhood sums and means."""
+    context_k: tuple[int, ...]
+    corr_threshold: float
+    """|r| above this marks a feature pair as near-duplicates."""
+
+
+@dataclass(frozen=True)
 class Config:
     """The full, validated project configuration."""
 
@@ -153,6 +183,7 @@ class Config:
     sources: SourcesConfig
     buildings: BuildingsConfig
     pois: PoisConfig
+    features: FeaturesConfig
     random_seed: int
     source_path: Path
     """The YAML file this configuration was loaded from. Pipeline steps
@@ -233,6 +264,7 @@ def load_config(path: str | Path = DEFAULT_CONFIG_PATH) -> Config:
         sources=_sources_from(_section(raw, "sources")),
         buildings=_buildings_from(_section(raw, "buildings")),
         pois=_pois_from(_section(raw, "pois"), root),
+        features=_features_from(_section(raw, "features")),
         random_seed=_seed_from(raw.get("random_seed")),
         source_path=resolved,
     )
@@ -450,6 +482,77 @@ def _buildings_from(section: dict[str, Any]) -> BuildingsConfig:
         )
     return BuildingsConfig(
         iou_threshold=float(iou), m_per_level=float(m_per_level), default_levels=defaults
+    )
+
+
+def _str_tuple(value: Any, key: str) -> tuple[str, ...]:
+    if (
+        not isinstance(value, list)
+        or not value
+        or not all(isinstance(v, str) and v.strip() for v in value)
+    ):
+        raise ValueError(f"config error: '{key}' must be a non-empty list of non-empty strings")
+    if len(set(value)) != len(value):
+        raise ValueError(f"config error: '{key}' must not contain duplicates")
+    return tuple(value)
+
+
+def _features_from(section: dict[str, Any]) -> FeaturesConfig:
+    center = section.get("center")
+    if not isinstance(center, dict):
+        raise ValueError("config error: 'features.center' must be a mapping with 'lat' and 'lon'")
+    lat, lon = center.get("lat"), center.get("lon")
+    if not _is_number(lat) or not (-90 <= lat <= 90):
+        raise ValueError("config error: 'features.center.lat' must be a latitude in [-90, 90]")
+    if not _is_number(lon) or not (-180 <= lon <= 180):
+        raise ValueError("config error: 'features.center.lon' must be a longitude in [-180, 180]")
+
+    large = section.get("large_gfa_m2")
+    if not _is_number(large) or large <= 0:
+        raise ValueError("config error: 'features.large_gfa_m2' must be a positive number")
+
+    sub_raw = section.get("subcenters")
+    if not isinstance(sub_raw, dict):
+        raise ValueError(
+            "config error: 'features.subcenters' must be a mapping with "
+            "eps_m, min_samples and max_centers"
+        )
+    eps = sub_raw.get("eps_m")
+    if not _is_number(eps) or eps <= 0:
+        raise ValueError("config error: 'features.subcenters.eps_m' must be a positive number")
+    subcenters = SubcentersConfig(
+        eps_m=float(eps),
+        min_samples=_positive_int(sub_raw.get("min_samples"), "features.subcenters.min_samples"),
+        max_centers=_positive_int(sub_raw.get("max_centers"), "features.subcenters.max_centers"),
+    )
+
+    context_k = section.get("context_k")
+    valid_k = (
+        isinstance(context_k, list)
+        and bool(context_k)
+        and all(isinstance(k, int) and not isinstance(k, bool) and k > 0 for k in context_k)
+        and all(later > earlier for earlier, later in itertools.pairwise(context_k))
+    )
+    if not valid_k:
+        raise ValueError(
+            "config error: 'features.context_k' must be a strictly increasing list "
+            "of positive integers"
+        )
+
+    threshold = section.get("corr_threshold")
+    if not _is_number(threshold) or not (0 < threshold <= 1):
+        raise ValueError("config error: 'features.corr_threshold' must be a number in (0, 1]")
+
+    return FeaturesConfig(
+        center_lat=float(lat),
+        center_lon=float(lon),
+        large_gfa_m2=float(large),
+        betweenness_k=_positive_int(section.get("betweenness_k"), "features.betweenness_k"),
+        subcenters=subcenters,
+        log1p_prefixes=_str_tuple(section.get("log1p_prefixes"), "features.log1p_prefixes"),
+        context_columns=_str_tuple(section.get("context_columns"), "features.context_columns"),
+        context_k=tuple(context_k),
+        corr_threshold=float(threshold),
     )
 
 

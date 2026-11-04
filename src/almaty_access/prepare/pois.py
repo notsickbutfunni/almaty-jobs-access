@@ -110,11 +110,16 @@ def prepare_pois(config: Config, *, force: bool = False) -> Path:
 
         pois = pois[pois.geometry.within(boundary)]
         pois = pois.drop_duplicates(subset="osm_id", keep="first")
+        # railway/station ride along so Phase 2 transit features can tell
+        # metro stations (railway=station + station=subway) from rail ones.
+        na = pd.Series(pd.NA, index=pois.index)
         result = gpd.GeoDataFrame(
             {
                 "osm_id": pois["osm_id"].astype("string"),
-                "name": pois.get("name", pd.Series(pd.NA, index=pois.index)).astype("string"),
+                "name": pois.get("name", na).astype("string"),
                 "category": pois["category"],
+                "railway": pois.get("railway", na).astype("string"),
+                "station": pois.get("station", na).astype("string"),
             },
             geometry=pois.geometry,
             crs=pois.crs,

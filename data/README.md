@@ -65,6 +65,19 @@ code offline. Exception: `district_stats.csv` in the sample is
 fabricated. OSM-derived sample files are ODbL, the population clip CC BY
 (Kontur), the DEM clip Copernicus (attribution below).
 
+## Processed outputs (Phase 2)
+
+Written by `almaty-access features` into `processed/` (git-ignored;
+regenerate with one command). All derived purely from the layers above,
+so the same licences apply (ODbL for OSM-derived content):
+
+| File | Contents |
+|---|---|
+| `grid_r8.parquet`, `grid_r9.parquet` | Study grid: hex polygons, district (largest overlap), `district_share`, `in_city` |
+| `features_r8.parquet`, `features_r9.parquet` | One row per hex, identical schema at both resolutions (plain parquet; join the grid on `h3` for maps; column list and count in `features_report.json`) |
+| `subcenters.parquet` | Job sub-centres found by clustering business POIs (`in_city=False` marks buffer-zone satellite clusters) |
+| `features_report.json` | What was log-transformed, what was pruned as a near-duplicate and why, sub-centre count, seeds |
+
 ## Attribution
 
 - **OpenStreetMap** (and OSM-derived layers, Overture buildings):

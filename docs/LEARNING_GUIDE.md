@@ -1,4 +1,4 @@
-# Learning Guide
+﻿# Learning Guide
 
 Plain-language explanations of what each phase does, why each method was
 chosen, and the key formulas — one section per phase. Written so that
@@ -329,3 +329,178 @@ to the predictions.
   warning?* Downstream everything joins on 8 districts; a silent 7 would
   corrupt every later result. Fail at the first step where the problem
   is visible and fixable.
+
+---
+
+# Phase 2 - H3 grid and feature engineering
+
+**What was built.** `almaty-access features` turns the cleaned layers
+into two tidy tables - one row per hex at H3 resolution 8 (analysis,
+~0.74 km2) and 9 (fine, ~0.1 km2) - with 86 features before pruning,
+68 after, zero missing values. Everything a model may ask about a hex:
+how much floor space and of what kind, what services operate there, how
+the street network runs through it, how far the centre, transit and
+job sub-centres are, how steep it is, and what its neighbourhood looks
+like. `data/processed/features_report.json` records every transform and
+every dropped column.
+
+## The grid, and why it is bigger than the city
+
+Hexes enter the grid when their **centroid** lies inside the city
+boundary buffered by 5 km. The buffer ring (917 of 1,846 r8 cells)
+carries features but no district: it exists so that neighbourhood
+context - and, in Phase 4, travel times - do not pretend the world ends
+at the administrative edge. A hex on the boundary is assigned to the
+district holding the largest share of its area, and that share is
+stored (`district_share`), because Phase 3 must aggregate hex estimates
+back to district totals honestly.
+
+## Splitting buildings between hexes
+
+At r9 a hex is ~360 m across; a bazaar hall or factory can be nearly
+hex-sized. Mass quantities (footprint m2, GFA m2) are therefore split
+**area-weighted**: each hex receives the share of the building that
+geometrically lies inside it (computed in EPSG:32643). Indivisible
+facts (the building count, floor statistics) follow the representative
+point. Rule of thumb worth remembering: *split what is additive, vote
+with what is not.*
+
+## Shannon entropy - measuring mixed use
+
+For category counts in a hex, with p_i the share of category i:
+
+    H = -sum_i p_i * ln(p_i)
+
+H = 0 means a single-purpose hex (only pharmacies, say); ln(20) ~ 3.0
+would be all twenty categories equally present. Mixed-use places are
+where consumer-service jobs cluster, which is why the README wants
+diversity as a feature, not just counts.
+
+## Betweenness centrality - finding the through-streets
+
+A node's betweenness is the share of shortest paths (between all node
+pairs) passing through it. Retail follows passing trade, so corridors
+with high betweenness are job locations even when the surrounding
+density is modest. Exact computation is O(V*E) - about 2.8 billion
+operations here - so we use Brandes sampling: shortest-path trees from
+k=500 random sources (seeded, from config) give an unbiased estimate
+in about two minutes. *Interview line: betweenness is a model of
+through-movement potential, not observed traffic - and sampling noise
+is part of the feature, which is one more reason tree models (Phase 3)
+beat linear ones on such inputs.*
+
+## Sub-centres with DBSCAN
+
+"Distance to the nearest major sub-centre" needs sub-centres first.
+DBSCAN over business POIs (office, finance, commerce) in metric
+coordinates grows clusters from density (eps 400 m, >= 40 POIs) and
+labels stragglers as noise - no cluster count chosen in advance, which
+is the honest setting when you do not know how polycentric the city is.
+The cluster nearest the configured historic centre is the centre
+itself, so it is excluded; the five survivors (389/247/147/138/91 POIs)
+are the sub-centres. On the tiny sample everything is one downtown
+cluster, so the distance falls back to the centre distance - the
+monocentric degenerate case, stated in the report rather than hidden.
+
+## Why log1p, and the 3-point correlation trap
+
+Counts and areas are heavy-tailed: most hexes hold little, a few hold
+enormous mass. A linear scale would let a handful of hexes dominate any
+distance-based computation, so the config marks count/area columns for
+log1p (log of 1+x: defined at zero, gentle on small values). The
+feature tables keep RAW values - transforms are applied at model time,
+and the report lists the exact columns, so nothing is baked in twice.
+
+Near-duplicates (|r| > 0.95 on the log view) are pruned with the
+earlier of two expendable columns kept. The first sample run taught
+lesson one: with only 3 cells, pruning "removed" 52 of 87 features -
+through three points almost any two monotone series correlate near 1.
+Hence MIN_CELLS_FOR_PRUNING = 30. *Correlation needs observations
+before it means anything.* The first CITY run taught lesson two: a
+purely mechanical rule happily deleted the README's core features -
+total GFA lost to the building count (r = 0.96, they really do move
+together in a mid-rise city), and mean elevation lost to road distance
+(r = 0.97 only because Almaty's grid thins out exactly where the
+mountains start - a geographic coincidence, not a duplicate). Hence
+PROTECTED_FEATURES: the named core columns can never be dropped, and a
+highly correlated pair of protected columns is *recorded* in the
+report's `high_corr_kept` instead. Documented collinearity beats
+silently missing semantics - and the random forest in Phase 3 does not
+mind collinear inputs. The drops that DO happen have mechanical
+causes: densities duplicate counts exactly (fixed hex area), k-ring
+means duplicate sums (disk sizes are nearly constant), and
+tr_stop_cnt duplicates poi_cnt_transit_stop (the same physical stops
+counted by two blocks).
+
+## Moran's I - proving the structure is spatial
+
+    I = (n / S0) * sum_ij( w_ij * z_i * z_j ) / sum_i( z_i^2 )
+
+with z the demeaned values, w_ij = 1 for H3 ring-1 neighbours
+(row-standardized), S0 the weight sum. I ~ +1 means similar values
+cluster; 0 means spatial noise. Significance comes from a permutation
+test: shuffle the values over the same grid 199 times and ask how
+extreme the observed I is (pseudo p-value). Implemented in ~60 lines in
+`features/spatial.py` instead of adding a dependency - every step of it
+is explainable, which is the point of this project. Urban features
+SHOULD cluster; if GFA came out with I ~ 0 the join would be broken.
+That makes Moran's I a data *test*, not just a statistic.
+
+## What the adversarial review caught (and why it matters)
+
+Four reviewer agents re-derived the phase from the README and attacked
+the code AND the shipped parquet files; a verifier then had to
+reproduce every major claim before it counted. All four majors were
+real (full detail: DECISIONS D-034). Two make excellent interview
+stories because each is a *class* of mistake, not a typo:
+
+- **The directed-graph trap.** osmnx street layers are directed: a
+  two-way street is stored twice with the same geometry. Degrees and
+  betweenness collapsed direction correctly, but the road-length
+  features summed raw rows - local streets (mostly two-way) came out
+  1.98x too long while major roads (often one-way pairs) only 1.21x,
+  silently distorting the street-mix signal. Lesson: *know whether
+  each representation of a network is directed, and normalize at the
+  feature boundary, not in your head.*
+- **The TV-tower trap.** `building=no` is OSM's explicit "this is NOT
+  a building" marker. It was missing from the drop list, so the
+  371.5 m Almaty TV mast divided by 3 m per level became a 124-storey
+  "public building" holding 60,000 m2 of phantom floor space on
+  Kok-Tobe - which the k-ring features then smeared into every
+  neighbouring hex. Lesson: *tag semantics are data cleaning; a
+  height-to-floors heuristic needs a sanity bound* (we now warn above
+  55 derived floors).
+
+The review also forced honesty in the docs themselves: the first
+version of this very chapter told a plausible story about population
+being dropped against residential GFA "by construction" - the shipped
+report showed that drop never happened (the real pair was population
+vs building count). A narrative that contradicts your own artefacts
+is worse than no narrative; everything here is now written FROM
+features_report.json.
+
+## Interview Q&A
+
+- *Why compute features on the buffer if the model trains on city
+  hexes?* Because k-ring context of an edge hex reaches outside the
+  city; truncating there would systematically bias edge features
+  downward - the classic edge effect.
+- *What happens to a distance feature when its target class is absent?*
+  It holds the documented fallback (the study-area diagonal) - finite
+  and constant beats NaN or a fabricated zero. The sample demonstrates
+  it: no motorway/trunk/primary road crosses the bbox, so
+  net_dist_major_m is a constant 2,812 m there (the metro columns are
+  real - four stations sit inside the bbox).
+- *Why keep density features at all if they duplicate counts?* They are
+  kept in the build for readability, and the pruning step (with the
+  report) removes them transparently. Deleting them silently in code
+  would hide the reasoning; the report IS the documentation.
+- *Why prune on r8 and apply to r9?* Phase 3 models at r8; r9 must keep
+  the identical schema so maps and the model share column meaning.
+- *Why DBSCAN and not k-means?* k-means needs k and assigns every point
+  to a cluster; DBSCAN discovers the number of dense cores and discards
+  noise - matching "find the sub-centres, wherever and however many
+  they are".
+- *Is the betweenness comparable between sample and city?* No - it is
+  normalized within each graph; comparisons are valid within one run,
+  which is how the model uses it.

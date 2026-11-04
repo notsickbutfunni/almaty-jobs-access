@@ -275,3 +275,167 @@ POI counts shown for context); residual short-edge grade noise above;
 rare OSM-internal duplicates (a closed way AND a multipolygon relation
 both tagged building=*) are not de-duplicated — a tagging error in OSM
 itself, low frequency, revisit in Phase 2 if footprint sums look off.
+
+## Phase 2 - H3 grid and feature engineering (2026-11-03)
+
+### D-025: Grid = hex centroid inside the buffered boundary (intersected with area.bbox when set)
+README asks to keep hexes whose centroid is inside the buffered
+boundary. For the sample the extra bbox intersection is required: its
+raw boundary holds the FULL city polygon (bbox downloads return whole
+intersecting polygons), so without it the sample grid would cover the
+whole city with data only in the bbox. Districts are assigned by the
+largest area overlap in EPSG:32643 with `district_share` stored, so
+border hexes are visibly split; buffer-ring hexes get `district = NA`
+and `in_city = False`. They stay in the table so k-ring context (and
+later accessibility) is not cut off at the city edge; Phase 3 trains on
+`in_city` hexes only. The share is clipped to 1.0: a hex fully inside a
+district produces ratios like 1.0000000000000002 in float arithmetic.
+
+### D-026: Building mass is split area-weighted; counts stay whole
+A building straddling a hex border contributes footprint and GFA to
+each hex in proportion to geometric overlap (computed in the metric
+CRS); mass outside the grid is genuinely outside and is dropped, not
+renormalized back in. Counts, mean/max floors are per-building
+(indivisible) and follow the representative point. Alternative
+rejected: centroid assignment for everything - at r9 (hex ~0.1 km2) a
+large industrial hall can be hex-sized, and putting all of its GFA into
+one hex would distort exactly the hexes the job model cares most about.
+
+### D-027: `station` tag added to the POI extraction (column-only); city + sample re-extracted
+Phase 2 needs metro stations separately from heavy rail
+(`railway=station` + `station=subway`); Phase 1 kept no `station`
+column. It is a column-only key (POI_EXTRA_KEYS): a bare `station=*`
+without `railway=*` is mapping noise and must not create POIs. The
+re-extraction also delivered the representative-point fix for area POIs
+city-wide (deferred at Phase 1 close). Interim pois.parquet now carries
+`railway`/`station` so the transit block works from the cleaned layer.
+
+### D-028: Near-duplicate pruning on the log1p view, analysis resolution only, with guards
+Pairs with |r| > 0.95 on the log-transformed r8 table lose one column;
+the same drop list is applied to r9 so both tables keep identical
+schemas. Raw heavy-tailed counts make Pearson r meaningless, hence the
+log1p view. Two guards, both earned the hard way:
+- Small-sample guard: with fewer than 30 cells (MIN_CELLS_FOR_PRUNING)
+  pruning is skipped and the report says why - the first sample run
+  "pruned" 52 of 87 features because ANY two monotone series through 3
+  points correlate near 1.
+- Protected set (added after the Phase 2 adversarial review, D-034):
+  the first city run dropped README-mandated core features - total GFA
+  lost to the building COUNT (r=0.96), and mean elevation lost to
+  road distance (r=0.97: a geographic coincidence in a mountain city,
+  not a duplicate). PROTECTED_FEATURES (build.py) can never be
+  dropped; a high-r pair of protected columns is recorded in the
+  report's `high_corr_kept` instead - documented collinearity beats
+  silently missing semantics, and the Phase 3 random forest tolerates
+  collinear inputs anyway.
+Known-by-design drops on the real city: densities (exact multiples of
+counts on a fixed-area grid), k-ring means vs sums (disk sizes nearly
+constant), and tr_stop_cnt (the same physical count as
+poi_cnt_transit_stop). All drops and kept pairs are recorded in
+features_report.json.
+
+### D-029: No-NaN gate and explicit fallbacks instead of silent missing values
+The build fails if any feature is NaN/inf. Structural zeros are filled
+(no buildings -> 0 GFA and 0 floor stats); distance features fall back
+to the study-area bbox diagonal when a target class is absent - in the
+sample that is net_dist_major_m (no motorway/trunk/primary inside the
+bbox -> the constant 2,812 m diagonal; the sample DOES contain 4 metro
+stations, so tr_dist_metro_m is real there) - finite, comparable,
+documented in the report; hexes missing ANY terrain column borrow that
+column from the nearest hex (the slope raster's valid mask is one
+gradient-ring smaller than the DEM's, so elevation-only hexes exist in
+principle); `pop_per_1k_nonres_gfa` divides by max(non-residential GFA,
+100 m2) so hexes without workspace give a large-but-finite ratio.
+`cent_dist_subcenter_m` falls back to the centre distance when no
+sub-centres exist (the monocentric degenerate case, e.g. the sample).
+
+### D-030: Sub-centres via DBSCAN over business POIs; centre cluster excluded
+DBSCAN (eps 400 m, min_samples 40 on the city; scaled down in the
+sample config) over office+finance+commercial POIs in EPSG:32643.
+DBSCAN needs no cluster count up front and ignores noise - right shape
+for an unknown polycentric structure. The cluster nearest the
+configured historic centre IS the centre and is excluded; the rest are
+ranked by POI count, top 5 kept. The centre itself is config
+(`features.center`): Ascension Cathedral in Panfilov Park, the core of
+old Verny - editable, and verified visually in the EDA. City result:
+5 sub-centres (389/247/147/138/91 business POIs). The largest (389) is
+the Otegen Batyr satellite township in the BUFFER, outside the city
+boundary: deliberately kept eligible - it is a real job destination
+that edge hexes genuinely orient to, exactly what the buffer exists
+for - and labelled with an `in_city` column in subcenters.parquet so
+maps and Phase 3 can tell satellite clusters from Almaty's own
+sub-centres (Barakholka corridor, Almaty-1 station area).
+
+### D-031: Betweenness centrality: sampled (k=500), seeded, on the full buffered drive graph
+Exact betweenness is O(V*E) (~2.8e9 here) for no analytical gain;
+Brandes sampling with k=500 sources (config, capped at n, seeded from
+random_seed) approximates it in ~2 min on 33k nodes. Undirected simple
+graph with min length over parallel edges - through-movement potential,
+not routing. Computed once on the full buffered network so values near
+the city edge are not biased by a cut graph, then aggregated per hex
+(mean and max) at both resolutions.
+
+### D-032: Deliberate deferrals
+Routes-per-hex (README transit examples) needs OSM route relations;
+Phase 4 extracts them anyway for its no-GTFS fallback, so the feature
+arrives there instead of being half-built now. The same applies to the
+README's "distance to nearest metro / BRT stop": the metro half ships
+now (station=subway), while identifying BRT-corridor stops also needs
+route relations, so the BRT half arrives with Phase 4. Night lights
+are marked optional in the README - skipped. Land use is read from the
+raw layer (clip+group on the fly) instead of adding a prepare step: it
+is a single cheap consumer; revisit if a second consumer appears.
+
+### D-033: New dependencies: scikit-learn, networkx (explicit)
+scikit-learn for DBSCAN now and the Phase 3 random forest; networkx
+was already a transitive osmnx dependency but is now a direct one
+because feature code imports it. Both mainstream, wheels everywhere.
+
+### D-034: Adversarial review round (4 lenses + verification) - all 4 confirmed majors fixed
+Four reviewer agents (plan conformance, spatial-math correctness,
+tests/CI, data quality of the actual parquet outputs) + one
+adversarial verifier per major claim. Every major was CONFIRMED with a
+reproduction and fixed:
+- **Two-way streets double-counted in road lengths.** The interim
+  layers store osmnx DIRECTED edges (u->v AND v->u share one
+  geometry); summing rows inflated net_len_* by 1.21x (major roads) to
+  1.98x (local streets) - enough to distort the class mix 1.6x. Fix:
+  `undirected_edges()` keeps one row per (node pair, key, length) for
+  length features; keeping length in the key spares genuine dual
+  carriageways (~0.2% of pairs). Degrees and betweenness already
+  collapsed direction - the inconsistency is what gave it away.
+- **Greedy pruning removed README-mandated features** (total GFA lost
+  to building count; mean elevation lost to a coincidental r=0.97 with
+  road distance). Fix: PROTECTED_FEATURES (see D-028 update).
+- **`net_len_service_m` was structurally zero**: osmnx
+  network_type='drive' never downloads highway=service/track, so the
+  class could not receive a metre. Dead feature removed from
+  HIGHWAY_GROUPS/GROUP_ORDER (schema: 86 features before pruning).
+- **`building=no` leaked phantom GFA** (a Phase 1 gap): OSM's explicit
+  not-a-building marker was missing from NON_OCCUPIABLE_TAGS, so the
+  Almaty TV tower (height 371.5 m / 3 m per level = "124 floors")
+  shipped as 60,127 m2 of public floor space on Kok-Tobe, plus two
+  more objects - 111,870 m2 of fabricated GFA total. Fixed in prepare
+  + a warning for height-derived floor counts above 55.
+Minors fixed in the same round: land-use groups made mutually
+exclusive via precedence (industrial > commercial > green >
+residential; blanket residential polygons had pushed per-hex share
+sums to 1.95 over industrial zones); log1p prefixes narrowed so
+shares/floor-stats/ratios are not log-transformed; terrain borrowing
+keyed on any missing column, filling only the gap; self-loops no
+longer count as street neighbours; sub-centres labelled `in_city`;
+the fallback-distance and pruning paths got direct unit tests; a CLI
+test made cwd-independent; and this file plus the learning guide were
+corrected where their pruning narrative contradicted the shipped
+report (the original text blamed a pop-vs-residential-GFA drop that
+never happened; the real pair was pop_residents vs bf_bldg_cnt,
+r=0.97, now a protected kept-pair).
+
+Open questions for the user (Phase 2):
+- The historic centre is set to the Ascension Cathedral / Panfilov Park
+  area (43.2586 N, 76.9532 E). If you would rather anchor on Republic
+  Square or Abay/Dostyk, change `features.center` and re-run
+  `almaty-access features --force`.
+- `features.subcenters` (eps 400 m / min 40 POIs / top 5) found five
+  plausible sub-centres; tune and re-run if your local knowledge
+  disagrees with the EDA map.

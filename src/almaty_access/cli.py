@@ -24,6 +24,7 @@ from almaty_access.download import dem as dl_dem
 from almaty_access.download import osm as dl_osm
 from almaty_access.download import population as dl_population
 from almaty_access.download import stats as dl_stats
+from almaty_access.features import build as feat_build
 from almaty_access.log import setup_logging
 from almaty_access.prepare import boundary as prep_boundary
 from almaty_access.prepare import buildings as prep_buildings
@@ -246,10 +247,21 @@ def sample(
 
 
 @app.command()
-def features(config: ConfigOpt = DEFAULT_CONFIG, verbose: VerboseOpt = False) -> None:
-    """Build hex-level feature tables at H3 resolutions 8 and 9. [Phase 2]"""
-    _load_and_seed(config, verbose)
-    _exit_not_implemented("features")
+def features(
+    config: ConfigOpt = DEFAULT_CONFIG,
+    force: ForceOpt = False,
+    verbose: VerboseOpt = False,
+) -> None:
+    """Build hex-level feature tables at H3 resolutions 8 and 9. [Phase 2]
+
+    Writes grid_r{8,9}.parquet, features_r{8,9}.parquet,
+    subcenters.parquet and features_report.json into data/processed/.
+    Requires `almaty-access prepare` to have run.
+    """
+    cfg = _load_and_seed(config, verbose)
+    _run_steps(
+        {"features": feat_build.build_features}, cfg, only=None, force=force, verbose=verbose
+    )
 
 
 @app.command()

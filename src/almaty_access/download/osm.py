@@ -26,7 +26,7 @@ from almaty_access.download.area import study_bbox, study_inputs, study_polygon
 from almaty_access.io import ensure_built, write_geoparquet
 from almaty_access.prepare.boundary import RAW_FILE as BOUNDARY_FILE
 from almaty_access.prepare.network import raw_network_files
-from almaty_access.schemas import NETWORK_MODES, POI_TAG_KEYS
+from almaty_access.schemas import NETWORK_MODES, POI_EXTRA_KEYS, POI_TAG_KEYS
 
 logger = logging.getLogger(__name__)
 
@@ -372,7 +372,7 @@ class _LayerExtractor:
     @staticmethod
     def _poi_row(osm_id: str, geometry: shapely.Geometry, tags: dict[str, str]) -> dict:
         row = {"osm_id": osm_id, "name": tags.get("name"), "geometry": geometry}
-        for key in POI_TAG_KEYS:
+        for key in (*POI_TAG_KEYS, *POI_EXTRA_KEYS):
             row[key] = tags.get(key)
         return row
 
