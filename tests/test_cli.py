@@ -16,7 +16,6 @@ PIPELINE_COMMANDS = ("download", "prepare", "features", "model", "access", "equi
 UTILITY_COMMANDS = ("info", "sample")
 
 STAGE_PHASES = {
-    "access": 4,
     "equity": 5,
     "report": 8,
 }
@@ -109,3 +108,16 @@ def test_features_with_missing_inputs_exits_cleanly(tmp_path: Path) -> None:
     result = runner.invoke(app, ["model", "--config", str(config_file)])
     assert result.exit_code == 1
     assert "failed" in result.output
+
+    # And for the Phase 4 access command.
+    result = runner.invoke(app, ["access", "--config", str(config_file)])
+    assert result.exit_code == 1
+    assert "failed" in result.output
+
+
+def test_access_help_names_steps_and_approximation() -> None:
+    result = runner.invoke(app, ["access", "--help"])
+    assert result.exit_code == 0
+    flat = result.output.replace("\n", "")
+    assert "times" in flat and "measures" in flat
+    assert "APPROXIMATE" in flat

@@ -28,7 +28,9 @@ travel:
   speeds_kmh:
     walk: 4.8
     bike: 15.0
-  # Weekday morning peak used for transit travel times (Phase 4).
+  # Reserved for a timetable-based (GTFS / r5py) transit path. The
+  # Phase 4 headway fallback has no departure times - the peak enters
+  # only through access.transit.headways_min (see DECISIONS D-047).
   departure_window: ["07:00", "09:00"]
 
 paths:
@@ -157,6 +159,48 @@ model:
     max_features: 0.5 # fraction of features tried per split
   # Reported uncertainty levels (across trees): low / central / high.
   quantiles: [0.1, 0.5, 0.9]
+
+# Phase 4 travel times and accessibility (README §7 Phase 4).
+access:
+  # Gravity measure: a job's weight halves every this-many minutes of
+  # travel (beta = ln 2 / half-life). 20 min is a common urban choice;
+  # the report carries a sensitivity check at 10 and 30 min.
+  gravity_half_life_min: 20
+  # Walk catchment of the two-step floating catchment area (2SFCA) for
+  # capacity-constrained services (schools, kindergartens, clinics).
+  sfca_catchment_min: 15
+  # Green areas below this size are not park destinations (README: >1 ha).
+  park_min_m2: 10000
+  # A hex centroid farther than this from the mode's network is treated
+  # as off-network: excluded from matrices and counted in the report.
+  snap_max_m: 2000
+  # No public GTFS exists for Almaty (DECISIONS D-016): transit times are
+  # APPROXIMATE, built from OSM route relations plus these assumptions.
+  # All of them are editable - refine with real operational data.
+  transit:
+    # Assumed commercial speeds (stop-to-stop, dwell included), km/h.
+    speeds_kmh: { bus: 17.0, trolleybus: 15.0, subway: 32.0 }
+    # Assumed peak headways, minutes; waiting time = half the headway,
+    # paid at every boarding (so a transfer pays a second wait).
+    headways_min: { bus: 10.0, trolleybus: 12.0, subway: 7.0 }
+    # Straight-line distance between consecutive stops is multiplied by
+    # this per-mode factor to approximate the real path: buses wind
+    # through the street grid, metro tunnels run nearly straight.
+    circuity: { bus: 1.3, trolleybus: 1.3, subway: 1.05 }
+  # Free-flow car speeds by OSM highway class (reference mode only;
+  # congestion is deliberately not modelled). '_link' classes map to
+  # their base class; anything unlisted uses 'default'.
+  car_speeds_kmh:
+    motorway: 90
+    trunk: 70
+    primary: 60
+    secondary: 50
+    tertiary: 45
+    unclassified: 40
+    residential: 30
+    living_street: 15
+    service: 20
+    default: 30
 
 # Used to seed every random number generator in the project.
 random_seed: 42

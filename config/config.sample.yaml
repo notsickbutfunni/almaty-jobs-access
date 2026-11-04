@@ -108,4 +108,27 @@ model:
     max_features: 0.5
   quantiles: [0.1, 0.5, 0.9]
 
+# Mirrors config/config.yaml (see the comments there); the sample bbox
+# is small enough that no scaling-down is needed.
+access:
+  gravity_half_life_min: 20
+  sfca_catchment_min: 15
+  park_min_m2: 10000
+  snap_max_m: 2000
+  transit:
+    speeds_kmh: { bus: 17.0, trolleybus: 15.0, subway: 32.0 }
+    headways_min: { bus: 10.0, trolleybus: 12.0, subway: 7.0 }
+    circuity: { bus: 1.3, trolleybus: 1.3, subway: 1.05 }
+  car_speeds_kmh:
+    motorway: 90
+    trunk: 70
+    primary: 60
+    secondary: 50
+    tertiary: 45
+    unclassified: 40
+    residential: 30
+    living_street: 15
+    service: 20
+    default: 30
+
 random_seed: 42

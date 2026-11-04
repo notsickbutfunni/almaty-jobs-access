@@ -18,6 +18,7 @@ from typing import Annotated
 import typer
 
 from almaty_access import __version__
+from almaty_access.access import build as access_build
 from almaty_access.config import Config, load_config, seed_everything
 from almaty_access.download import buildings as dl_buildings
 from almaty_access.download import dem as dl_dem
@@ -34,6 +35,7 @@ from almaty_access.prepare import dem as prep_dem
 from almaty_access.prepare import network as prep_network
 from almaty_access.prepare import pois as prep_pois
 from almaty_access.prepare import population as prep_population
+from almaty_access.prepare import transit as prep_transit
 
 app = typer.Typer(
     name="almaty-access",
@@ -58,7 +60,7 @@ OnlyOpt = Annotated[
     typer.Option("--only", help="Run only the named step(s); repeatable."),
 ]
 
-_PHASE_OF_STAGE = {"access": 4, "equity": 5, "report": 8}
+_PHASE_OF_STAGE = {"equity": 5, "report": 8}
 
 StepFunc = Callable[..., object]
 
@@ -80,7 +82,13 @@ PREPARE_STEPS: dict[str, StepFunc] = {
     "buildings": prep_buildings.prepare_buildings,
     "population": prep_population.prepare_population,
     "network": prep_network.prepare_networks,
+    "transit": prep_transit.prepare_transit,
     "completeness": prep_completeness.prepare_completeness,
+}
+
+ACCESS_STEPS: dict[str, StepFunc] = {
+    "times": access_build.build_times,
+    "measures": access_build.build_measures,
 }
 
 
@@ -221,7 +229,7 @@ def prepare(
     """Clean, clip and derive layers into data/interim/ (cached). [Phase 1]
 
     Steps in order: boundary, dem, pois, buildings, population, network,
-    completeness.
+    transit (OSM route relations), completeness.
     """
     cfg = _load_and_seed(config, verbose)
     _run_steps(PREPARE_STEPS, cfg, only=only, force=force, verbose=verbose)
@@ -282,10 +290,22 @@ def model(
 
 
 @app.command()
-def access(config: ConfigOpt = DEFAULT_CONFIG, verbose: VerboseOpt = False) -> None:
-    """Compute travel times and accessibility measures per mode. [Phase 4]"""
-    _load_and_seed(config, verbose)
-    _exit_not_implemented("access")
+def access(
+    config: ConfigOpt = DEFAULT_CONFIG,
+    only: OnlyOpt = None,
+    force: ForceOpt = False,
+    verbose: VerboseOpt = False,
+) -> None:
+    """Travel times and accessibility per mode (cached). [Phase 4]
+
+    Steps in order: times (Dijkstra matrices tt_{mode}_r{res}.parquet +
+    nearest-facility minutes), measures (access_r{8,9}.parquet +
+    access_report.json). Requires `prepare` (incl. the transit step),
+    `features` and `model` to have run. Transit times are APPROXIMATE:
+    OSM routes + assumed speeds and headways (config `access.transit`).
+    """
+    cfg = _load_and_seed(config, verbose)
+    _run_steps(ACCESS_STEPS, cfg, only=only, force=force, verbose=verbose)
 
 
 @app.command()

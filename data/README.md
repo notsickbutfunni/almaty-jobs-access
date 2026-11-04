@@ -80,6 +80,32 @@ so the same licences apply (ODbL for OSM-derived content):
 | `jobs_r8.parquet`, `jobs_r9.parquet` | Phase 3 job estimates per hex: Model A baseline + random-forest P10/P50/P90, district totals conserved (buffer hexes carry 0) |
 | `model_report.json` | Targets and years used, LODO comparison of both models, permutation importances, jobs-per-resident ratios, top-20 hexes |
 
+## Transit network (Phase 4, interim)
+
+Written by `almaty-access prepare --only transit` into `interim/` from
+the already-downloaded PBF (OSM route relations — **no public GTFS
+exists for Almaty**, so this layer is the documented approximation):
+
+| File | Contents |
+|---|---|
+| `transit_stops.parquet` | Stop/platform nodes of kept routes, clipped to the study area |
+| `transit_routes.parquet` | One row per kept `route=bus\|trolleybus\|subway` relation: mode, ref, headway and its provenance (`headway_source`: the OSM `interval` tag where parseable — 2 of 55 city routes — else `assumed` from config) |
+| `transit_legs.parquet` | Hops between consecutive kept stops (straight-line metres; circuity and speed are applied at graph-build time) |
+| `transit_extract.json` | Extraction honesty counts: relations without usable stops, routes clipped away, legs dropped as data errors |
+
+## Accessibility outputs (Phase 4)
+
+Written by `almaty-access access` into `processed/`. **Transit values
+are approximate transit access** (assumed speeds/headways, see
+`access.transit` in `config.yaml` and DECISIONS D-044/D-047):
+
+| File | Contents |
+|---|---|
+| `tt_walk_r8.parquet`, `tt_walk_r9.parquet`, `tt_bike_r8.parquet`, `tt_transit_r8.parquet`, `tt_car_r8.parquet` | Long travel-time matrices (`origin_h3, dest_h3, minutes`), pairs within 60 min only; snapping of both endpoints included as walk time |
+| `nearest_r8.parquet`, `nearest_r9.parquet` | Walking minutes to the nearest school / kindergarten / clinic / grocery / park / metro per hex |
+| `access_r8.parquet`, `access_r9.parquet` | Per-hex accessibility: cumulative jobs by mode x threshold, gravity access, % of city jobs, service counts on foot, 2SFCA per 1,000 residents, routes-per-hex (column conventions in `schemas.py`; note `near_*` measures to the facility point while `acc_*` is hex-aggregated — use r9 for short-threshold service claims) |
+| `tt_stats.json`, `access_report.json` | Snap statistics per mode, assumed-parameter echo, transit network counts, coverage, gravity half-life sensitivity, 10 spot-check OD pairs |
+
 ## Attribution
 
 - **OpenStreetMap** (and OSM-derived layers, Overture buildings):

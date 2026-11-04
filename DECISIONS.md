@@ -568,3 +568,194 @@ test now exercises the full forest path - including a district that
 exists only at r9 - so a city-only regression can no longer pass a
 green suite; the aggregate module docstring no longer claims
 share-weighted means.
+
+## Phase 4 - Travel times and accessibility (2026-11-04)
+
+### D-044: Transit from OSM route relations - approximate, and a lower bound
+No public GTFS exists for Almaty (D-016), so the README fallback applies:
+`route=bus|trolleybus|subway` relations from the already-downloaded PBF.
+What the data actually holds (country-wide): 293 such relations, of which
+only 100 carry usable ordered stop/platform node members; 193 are
+route-ways-only and CANNOT yield stop-to-stop legs - they are excluded
+and counted in `transit_extract.json`. Inside the buffered city: **55
+routes kept (48 bus, 5 trolleybus, 2 subway = both directions of the one
+metro line), 291 stops, 396 legs**. Validation: the kept subway
+relations have exactly 11 stops per direction and ~13 km of legs - the
+real line has 11 stations over 13.4 km. Two consequences, stated
+everywhere the numbers appear: (1) transit times are APPROXIMATE
+(assumed speeds/headways, D-047); (2) coverage is a LOWER BOUND - only
+127 of 1,846 r8 hexes host a mapped stop, so hexes served by real buses
+whose OSM relations lack stop members fall back to walking.
+**Open question for the user:** synthesizing stops every ~350 m along
+the 193 ways-only relations would lift coverage at the cost of inventing
+stop locations; real AlA stop/headway data would be better. Decide
+before Phase 5 reads the transit layer as "access deserts".
+
+Member-list rule: PTv2 tags each halt as a `stop` (position on the way)
+and/or `platform` (where passengers wait). Relations are used with
+whichever list is LONGER - one Almaty route maps 56 platforms but only
+13 stop positions, so "prefer stops" (the first implementation) threw
+away three quarters of its sequence. Lists are never mixed: a relation
+listing both would traverse every halt twice. Sequences break at any
+stop that is outside the area or unlocated (a leg must not bridge the
+gap), consecutive stops < 40 m apart are one halt mapped twice, and a
+> 20 km leg is treated as a data error (break, counted).
+
+### D-045: Resolution policy - walk at r8+r9, bike/transit/car at r8
+Walking is the fine-grained mode (r9 ~ 350 m hexes, 1.89M pairs within
+60 min); bike/transit/car matrices at r9 would multiply storage by ~50
+while adding nothing the r8 surface does not show at their spatial
+scale. Services (nearest, 2SFCA) are walk-based and live at both
+resolutions.
+
+### D-046: Speeds - Tobler walk, linear bike, free-flow car, per-mode circuity
+- **Walk:** Tobler's hiking function W(s) = 6·exp(-3.5·|s+0.05|) km/h on
+  the DIRECTED edge grade from Phase 1, rescaled so flat ground equals
+  the configured 4.8 km/h (the classic constant gives 5.04). Uphill and
+  downhill differ per direction - this is why the walk graph keeps both
+  directions of every street.
+- **Bike:** transparent assumption (constants in `access/speed.py`):
+  -1 km/h per 1% climb, +0.5 km/h per 1% descent, capped at 1.4x flat,
+  floored at 0.25x flat (pushing pace). No claim of a fitted model.
+- **Car:** free-flow speed by OSM highway class from config
+  (`*_link` ramps map to their base class, unlisted classes use
+  `default`). Reference mode only; congestion is deliberately absent,
+  so car access is an upper bound and is labelled so.
+- **Circuity is per mode** (bus/trolleybus 1.3, subway 1.05): legs use
+  straight-line stop-to-stop distance x circuity. The first
+  implementation used 1.3 for everything and inflated metro end-to-end
+  times by ~30% - tunnels do not wind through the street grid. With
+  1.05 the modeled metro end-to-end is ~26 min in-vehicle, consistent
+  with the real ~22-25 min given the assumed 32 km/h commercial speed.
+
+### D-047: Headway-based transit graph (no timetable)
+The frequency-based standard: each (route, stop) gets a virtual node;
+boarding costs half the route's headway (expected wait of a random
+arrival at uniform headways), riding costs leg distance x circuity /
+assumed commercial speed (dwell included in the speed), alighting ~1 s.
+The walk network is part of the same graph, so Dijkstra finds access,
+egress and transfer walks itself, and every extra boarding pays a new
+expected wait - exactly what a transfer costs in a frequency-based
+world. Headways come from the relation's `interval` tag when parseable,
+else from config assumptions (bus 10 / trolleybus 12 / subway 7 min) -
+and the tag is RARE: only **2 of the 55 kept routes** carry one (both
+16 min); the other 53 run on the assumptions. (Country-wide, 8 of the
+100 extracted relations have parseable tags; `transit_extract.json`
+reports both scopes separately.) Assumed commercial speeds: bus 17 /
+trolleybus 15 / subway 32 km/h. `travel.departure_window` stays
+reserved for a future timetable-based (GTFS/r5py) path: the headway
+model has no departure times - the peak enters only through the assumed
+headways - so the window is deliberately unused and its config comment
+says so. **All assumptions sit in `access.transit` in
+config.yaml precisely so someone with real operational data - the
+project author works at Almaty's traffic management centre - can refine
+them without touching code.** Implementation trap recorded: a
+zero-weight edge in a scipy sparse graph is indistinguishable from "no
+edge", so alight/connector arcs are floored at 1 second.
+
+### D-048: Snapping - largest strongly connected component, capped at 2 km
+Hex centroids snap to the nearest node of the mode graph's largest
+strongly connected component (snapping onto a disconnected service loop
+would fake city-wide unreachability), and the straight-line snap
+distance is walked at flat speed and added to every time through that
+hex (README 4.2). Hexes snapping farther than `access.snap_max_m`
+(2 km) are off-network: excluded from matrices and counted per mode in
+the report (city r8: 26 walk / 32 bike / 444 car hexes - mountain and
+steppe cells; raw car snap p95 is 9.4 km). Caveat this creates: a pair
+of kept mountain hexes can owe most of its "car" time to the walk to
+the road - a routing app silently moves the pin to the road instead,
+so spot checks there look odd but are not wrong.
+**Intrazonal rule** (review round): a self-pair (origin = destination)
+costs ONE snap leg, not two - a traveller already inside the hex never
+walks out to the network and back. Before this rule, 84 in-city r8
+hexes "could not reach their own hex" within 15 minutes (double-snap
+up to 48 min); the affected hexes carry 0.7% of jobs and 0.03% of
+residents, but the artifact was embarrassing and the one-leg rule is
+the defensible reading.
+
+### D-049: Measure scope - jobs for all modes, services on foot
+The README's literal mode x threshold x opportunity cross-product would
+be 96 mostly meaningless columns (kindergartens within 60 min by car is
+noise). Shipped instead: jobs x 4 modes x 4 thresholds (+ gravity +
+normalized %), services (schools, kindergartens, clinics incl.
+hospitals, grocery, parks >= `park_min_m2`) x walk x 4 thresholds,
+nearest-facility walk minutes for 6 types (school, kindergarten,
+clinic, grocery, park, metro), 2SFCA for the capacity-constrained three
+(schools, kindergartens, clinics) at a 15-min walk catchment, and
+`transit_routes_cnt` (the routes-per-hex feature deferred from Phase
+2). 2SFCA supply is the facility COUNT per hex - no open capacity data
+exists; stated as a proxy wherever the measure appears. Gravity decay
+beta = ln2 / half-life (20 min); the report's sensitivity block
+recomputes at 10 and 30 min half-lives: Spearman rho 0.9968 / 0.9996,
+so no Phase 5 ranking hangs on beta. All measures are truncated at the
+60-min matrix cutoff (a job at 60 min keeps 12.5% gravity weight;
+beyond it the contribution is negligible and unstored).
+**Endpoint caveat** (review round): `near_*` measures to the facility
+POINT while `acc_{service}_*` counts facilities by their HEX with
+centroid-to-centroid times, so at r8 (~1 km cells) a row can honestly
+say "nearest school 12 min" and "0 schools within 15 min" - the school
+sits far from its hex's centroid. Granularity, not a bug: make
+short-threshold service statements at r9, where the two columns agree.
+
+### D-050: Matrices - batched scipy Dijkstra, long format, <= 60 min
+As the README prescribes: graphs become CSR matrices (seconds), origins
+run through `scipy.sparse.csgraph.dijkstra` in batches of 512 with
+`limit = max threshold`, results are stored long (`origin_h3, dest_h3,
+minutes`) keeping only pairs within 60 min. City scale: walk r9 =
+1,891,915 pairs from 12,710 snapped origins (175 of the 12,885 r9
+hexes are off-network, D-048) in ~12 s; car r8 = 1.70M pairs
+(free-flow reaches almost everything). Nearest-facility times avoid a
+per-facility loop entirely: one Dijkstra from a virtual super-source on
+the TRANSPOSED graph, with source-to-facility arc weights equal to each
+facility's own snap walk - exact min over facilities in a single pass.
+The COO-sums-duplicates trap is regression-tested at all four places
+it bites: parallel street edges keep the fastest time, repeated route
+legs keep the fastest hop, two facilities on one node keep the smaller
+snap arc, and a forced two-batch Dijkstra run must match the
+single-batch run exactly.
+
+### D-051: Spot checks recorded, waiting for human verdicts
+`access_report.json` carries 10 seeded in-city OD pairs with per-mode
+times and centroid coordinates; notebook 04 prints them as paste-ready
+"lat,lon" pairs. The sample is STRATIFIED (review round): 5 pairs are
+drawn from the walk matrix - a uniform draw across a 30 km city left
+9 of 10 pairs beyond the walking cutoff, unusable for exactly the
+modes that most need checking - and 5 are unconstrained city pairs for
+car/transit at city scale (6 of the 10 now carry walk and transit
+times; a None still means "beyond 60 min for that mode", which is
+itself checkable). The README's done-when ("spot-checks against a
+routing app make sense") needs a human with a routing app - record the
+comparison outcome here once done. Note D-048's mountain caveat when
+judging pairs in the foothills.
+
+### D-052: Phase 4 adversarial review round - 3 confirmed majors fixed
+Same 4-lens + adversarial-verifier setup as D-034/D-043 (conformance,
+correctness, tests-ci, data-quality; every major reproduced
+independently before counting). 3 confirmed majors, 0 refuted:
+- **Country-wide count dressed as a kept-network property.** The
+  extract report's "headways from interval tag: 8" counted the whole
+  Kazakhstan PBF; only 2 of the 55 kept routes carry tag headways, so
+  the docs overstated ~4x how much real data anchors the transit
+  waits - in the one layer whose story is "assumptions are labelled".
+  Fixed: per-route `headway_source` column, both scopes reported
+  separately, D-047 and the learning guide reworded (the 193/293
+  ways-only ratio is also scoped as country-wide now).
+- **The transfer semantic had no test.** Docs called "every extra
+  boarding pays a new expected wait" the defining property, yet no
+  test built two routes; collapsing virtual route-stop nodes per stop
+  would have shipped green while making transfers free at the 72 city
+  stops where routes meet. Fixed: a two-route toy pins the exact
+  arithmetic (conn + H/2 + ride + alight + H/2 + ride + alight + conn).
+- **D-050 claimed a regression test that did not exist** (route-leg
+  dedup). Fixed by writing the tests rather than weakening the claim:
+  repeated legs, facility-arc min, and a forced two-batch == single-
+  batch Dijkstra equality test (the downgraded fourth finding) all
+  pin the COO-sums-duplicates trap family now.
+Minors fixed in the same round: docs' "12,885 origins" corrected to
+12,710 snapped (175 off-network); spot-check stratification (D-051);
+intrazonal one-snap-leg rule (D-048); near_* vs acc_* endpoint caveat
+(D-049); `travel.departure_window` explicitly documented as reserved
+for a timetable path; per-mode circuity pinned by an exact-seconds
+test; interval-tag headway precedence asserted end-to-end on the
+committed sample; INTERIM_TRANSIT_* schema constants now asserted and
+used by the writer itself.

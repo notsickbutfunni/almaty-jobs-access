@@ -643,3 +643,204 @@ And one more for the record: the review demanded a leakage probe for
 LODO (poison one district x100; its held-out prediction must stay
 sane), which is now a permanent regression test. Validation code
 deserves tests as much as model code does.
+
+# Phase 4 - Travel times and accessibility
+
+## The shape of the phase
+
+Two steps, cached separately. `times` turns each mode's network into a
+graph whose edge weights are SECONDS, then computes hex-to-hex travel
+times. `measures` turns those times plus the Phase 3 job surface and the
+POI layers into per-hex accessibility numbers. Keeping them separate
+means you can re-tune a measure (a half-life, a catchment) without
+recomputing twenty minutes of matrices.
+
+## Tobler's hiking function - terrain enters the travel times
+
+Almaty rises ~900 m from the steppe to the foothills, so flat-speed
+walking times would flatter the south. Tobler's classic function gives
+walking speed as a function of slope s (rise over run):
+
+    W(s) = 6 * exp(-3.5 * |s + 0.05|)   [km/h]
+
+Read it: fastest on a gentle 5% DOWNHILL (the |s + 0.05| is zero at
+s = -0.05), decaying exponentially as the ground tilts away from that
+optimum in either direction. On flat ground it gives 5.04 km/h; we
+rescale the whole curve so flat equals the configured 4.8 km/h - the
+SHAPE is Tobler's, the level is ours. Because Phase 1 stored a grade
+per DIRECTED edge, climbing Dostyk avenue and descending it get
+different speeds - which is exactly why the walk graph keeps both
+directions of every street.
+
+Cycling has no equally canonical formula, so the code states a
+transparent assumption instead: lose 1 km/h per 1% of climb, gain
+0.5 km/h per 1% of descent, never above 1.4x flat speed, never below a
+pushing pace. When an assumption cannot be sourced, make it small,
+visible and easy to change - do not dress it up as literature.
+
+## Why scipy instead of networkx loops
+
+A shortest-path call in networkx walks Python objects; scipy's
+`csgraph.dijkstra` runs compiled code over a CSR sparse matrix. The
+walk graph has 110,732 nodes and 300,120 directed edges; the 12,710
+snapped r9 origins (175 of the grid's 12,885 hexes are off-network)
+finish in about twelve seconds in batches of 512, producing
+1.89 million origin-destination pairs within 60 minutes. The same job
+as a networkx loop is hours. The recipe: map node ids to positions,
+build a COO matrix of edge seconds, convert to CSR, call dijkstra with
+`limit` (the search stops expanding past the largest threshold - a big
+win), slice the dense result at destination columns only.
+
+Two traps the tests now guard:
+- **COO sums duplicates.** Two parallel edges between the same nodes
+  (a street and its service alley) would be ADDED into one slower
+  edge. Fastest-edge-wins must happen before matrix assembly.
+- **A zero-weight edge is no edge.** Sparse graphs cannot tell an
+  explicit 0 from an absent entry, so free arcs (alighting a bus) are
+  floored at one second.
+
+## Transit without a timetable - the headway model
+
+With no GTFS, the honest model is frequency-based. Suppose a bus comes
+every H minutes and you arrive at a random moment: your expected wait
+is H/2. So the graph gets, per route and stop, a virtual "on the bus"
+node; stepping onto it costs H/2, riding to the next stop costs
+distance x circuity / assumed commercial speed, stepping off is free.
+The walking network is PART of the same graph, so Dijkstra invents
+access walks, egress walks and transfers on its own - and a transfer
+automatically pays a fresh H/2, which is precisely what transferring
+costs when you cannot time your arrival.
+
+Everything assumed sits in config: speeds (bus 17, trolleybus 15,
+metro 32 km/h commercial), headways (10/12/7 min), circuity per mode
+(1.3 street, 1.05 tunnel). The metro gave the model a free validation:
+the OSM relations carry exactly 11 stops per direction and ~13 km of
+legs - the real line's 11 stations and 13.4 km.
+
+The hard limitation to say out loud: two thirds of the route relations
+in the Kazakhstan OSM extract list their ways but not their stops (the
+Almaty-only share is unknowable - ways-only relations are never
+geolocated), and a route without ordered stops cannot produce
+stop-to-stop legs without inventing stop locations. The kept network
+(55 routes, 291 stops) is therefore a LOWER BOUND on transit access;
+hexes on unmapped-stop corridors fall back to walking. And the
+`interval` tag is rarer still: only 2 of the 55 kept routes carry one,
+so 96% of the waiting times rest on the config assumptions. Phase 5
+must read transit "deserts" with both caveats in hand.
+
+## Snapping, and the disconnected-island trap
+
+Hex centroids are not on the network; each snaps to the nearest node
+and the snap distance is walked at flat speed on top of every journey.
+Two guards make this honest. First, snapping only targets the largest
+STRONGLY connected component - the nearest node might be a gated
+service loop from which the city is unreachable, and an origin snapped
+there would report a fake desert. Second, a centroid more than 2 km
+from any node (high pastures, the ski ridge) is excluded and counted
+instead of being given a one-hour phantom walk.
+
+## The measures
+
+- **Cumulative opportunities** A_i(T) = sum of jobs in every hex within
+  T minutes. Instantly explainable ("jobs within 30 minutes"), and the
+  normalized version (% of ALL city jobs) is what lets walk, transit
+  and car share one scale.
+- **Gravity (Hansen)** A_i = sum_j O_j * exp(-beta * t_ij). Instead of
+  pulling beta from thin air, derive it from a HALF-LIFE: beta =
+  ln(2) / 20 min means a job 20 minutes away counts half of one next
+  door. The report recomputes the surface at 10- and 30-minute
+  half-lives; Spearman rho >= 0.997 against the central run, so the
+  RANKING of hexes - all Phase 5 uses - does not hang on the choice.
+- **Nearest facility** in walking minutes, for school / kindergarten /
+  clinic / grocery / park / metro. Computed without a per-facility
+  loop: one Dijkstra from a virtual super-source on the TRANSPOSED
+  graph (reverse every street, start from all facilities at once) gives
+  every node's distance TO its nearest facility exactly.
+- **2SFCA** for services where capacity matters. Step 1: every facility
+  hex j gets R_j = (its facilities) / (population able to reach j
+  within 15 min) - a clinic besieged by a dense bedroom district is
+  worth less per person. Step 2: every hex sums the R_j it can reach.
+  Units: facilities per 1,000 residents, competition-adjusted. With no
+  open capacity data, one facility = one unit of supply - a stated
+  proxy, not a hidden one.
+
+## Interview Q&A
+
+**Q: Why not just buffer each hex 2 km and count jobs inside?**
+Because people move on networks, not circles. In the foothills a 2 km
+crow-fly buffer crosses ravines no street crosses; network time with
+slope-aware speeds is the honest geometry. That is also why the car
+map is so much flatter than the walk map: streets erase terrain, legs
+do not.
+
+**Q: Your transit numbers - would you defend them to a transit planner?**
+As APPROXIMATE access under stated assumptions, yes - the config holds
+the assumed speeds and headways, the report labels every transit field,
+and the OSM-sourced network is a documented lower bound. As timetable
+truth, no - and the honest next step is operator data (real headways,
+real stop lists), which drops into the same config without code
+changes.
+
+**Q: Why is expected waiting half the headway?**
+Arrivals are uncorrelated with the schedule when there is no schedule
+to read. If buses come every H minutes and your arrival is uniform in
+the interval, the mean residual wait is H/2. Every boarding pays it,
+which makes transfers cost what they feel like they cost.
+
+**Q: Car access looks near-uniform at 45 minutes. Is that a bug?**
+It is free-flow by design (reference mode): median hex reaches ~96% of
+jobs in 45 min. Add congestion and the picture changes - that is
+exactly why the equity phase compares transit against car as a RATIO
+per hex rather than trusting absolute car minutes.
+
+## What went wrong before it went right (Phase 4 edition)
+
+- **"Prefer stop positions" discarded data.** PTv2 lets mappers tag
+  halts as stops AND platforms; one route had 13 stop positions but 56
+  platforms. The first extractor preferred stops and silently dropped
+  three quarters of that route. Fix: use whichever list is richer,
+  never both. *Lesson: when two encodings coexist, measure which one
+  carries the data before preferring either.*
+- **One circuity for streets and tunnels.** Metro legs x1.3 inflated
+  end-to-end rail times ~30%. Circuity is per mode now. *Lesson: any
+  constant applied across modes deserves a per-mode sanity check
+  against a known journey.*
+- **The verdict cell caught nothing - by design.** Monotonicity over
+  thresholds, transit never slower than the walk it contains,
+  percentages bounded, gravity below the 60-min cumulative: none of
+  these can fail silently anymore because the notebook refuses to
+  finish if they do.
+
+## What the Phase 4 adversarial review caught
+
+Three confirmed majors, none of them travel-time math - all three were
+about honesty and untested promises, which is its own lesson:
+
+- **The scope-creep number.** The report said "8 routes have real
+  interval tags" next to kept-network counts, but the 8 counted the
+  whole Kazakhstan PBF; the kept Almaty network has 2. The travel
+  times were right all along - the LABEL overstated how much real data
+  anchored them, in the one layer whose whole story is "assumptions
+  are labelled". *Lesson: every reported count must name its
+  denominator. A true number in the wrong scope is a false claim.*
+- **The untested defining property.** "Every boarding pays a fresh
+  expected wait" is what makes the headway model honest about
+  transfers - and no test ever built two routes. A refactor merging
+  virtual nodes per stop would have made transfers free with the suite
+  green. *Lesson: the sentence you would say first in an interview is
+  the sentence that most needs a test.*
+- **The documented test that did not exist.** DECISIONS claimed the
+  route-leg dedup was "regression-tested"; only the street-edge twin
+  was. The fix was writing the missing tests, not softening the claim -
+  the same trap (sparse COO summing duplicates) is now pinned at all
+  four places it bites. *Lesson: audit docs against the test suite the
+  way you audit code against the spec.*
+
+The round also produced the intrazonal rule (a hex reaches its own
+opportunities for one snap leg, not an out-and-back - before it, 84
+city hexes "could not reach themselves" in 15 minutes), stratified
+spot-check pairs (a uniform draw across a 30 km city left 9 of 10
+pairs unwalkable, useless for checking the walk mode), and the r8
+granularity caveat where `near_school 12 min` and `0 schools in 15
+min` coexist honestly because one measures to the point and the other
+to its hex centroid.

@@ -17,6 +17,11 @@ from __future__ import annotations
 #: Transport network modes downloaded and prepared in Phase 1.
 NETWORK_MODES: tuple[str, ...] = ("walk", "bike", "drive")
 
+#: OSM route-relation types the Phase 4 transit fallback understands.
+#: Almaty has buses, trolleybuses and one metro line; tram service ended
+#: in 2015 (tram relations elsewhere in the country PBF are clipped away).
+TRANSIT_MODES: tuple[str, ...] = ("bus", "trolleybus", "subway")
+
 #: OSM tag keys kept as columns when extracting POIs from the PBF.
 POI_TAG_KEYS: tuple[str, ...] = (
     "amenity",
@@ -118,6 +123,30 @@ INTERIM_NETWORK_EDGES = ("u", "v", "key", "length_m", "highway", "grade", "geome
 #: Building functions the classifier may assign.
 BUILDING_FUNCTIONS = ("residential", "commercial", "industrial", "public", "unknown")
 
+#: transit_stops.parquet — distinct stop/platform nodes of kept routes
+#: (point geometry, clipped to the study area).
+INTERIM_TRANSIT_STOPS = ("stop_id", "name", "geometry")
+
+#: transit_routes.parquet — one row per kept route relation (plain parquet).
+#: headway_min comes from the relation's ``interval`` tag when parseable
+#: (headway_source = "interval_tag"), otherwise from the assumed per-mode
+#: headway in config (headway_source = "assumed").
+INTERIM_TRANSIT_ROUTES = (
+    "route_id",
+    "mode",
+    "ref",
+    "name",
+    "headway_min",
+    "headway_source",
+    "n_stops",
+)
+
+#: transit_legs.parquet — hops between consecutive kept stops of a route
+#: (plain parquet). ``seg`` increments where the stop sequence was broken
+#: (a stop dropped by clipping); legs never span a break. ``dist_m`` is the
+#: straight-line metric distance (circuity is applied at graph-build time).
+INTERIM_TRANSIT_LEGS = ("route_id", "seg", "seq", "from_stop", "to_stop", "dist_m")
+
 # ---------------------------------------------------------------------------
 # Processed layers (data/processed/, written by `almaty-access features`)
 # ---------------------------------------------------------------------------
@@ -155,3 +184,29 @@ PROCESSED_JOBS = (
     "jobs_rf_p10",
     "jobs_rf_p90",
 )
+
+# ---------------------------------------------------------------------------
+# Processed layers (data/processed/, written by `almaty-access access`)
+# ---------------------------------------------------------------------------
+
+#: tt_{mode}_r{res}.parquet — long-format travel-time matrices (plain
+#: parquet): walk at r8 and r9, bike/transit/car at r8 only. Only pairs
+#: within max(travel.thresholds_min) minutes are stored; minutes include
+#: snapping of both endpoints, walked at the flat walking speed.
+PROCESSED_TT = ("origin_h3", "dest_h3", "minutes")
+
+#: access_r{res}.parquet — one row per grid hex (plain parquet, join the
+#: grid on h3 for maps). After the identifier columns, every column name
+#: starts with one of these prefixes:
+#:   acc_     reachable opportunities: acc_{opp}_{mode}_{T} (cumulative,
+#:            threshold T minutes) and acc_jobs_{mode}_grav (gravity).
+#:            Hex-aggregated: times run centroid-to-centroid, so at r8 a
+#:            facility can be "12 min away" (near_) yet its HEX centroid
+#:            beyond 15 min — use r9 for short-threshold service claims.
+#:   accpct_  acc_jobs_{mode}_{T} as % of all city jobs at that resolution
+#:   near_    minutes to the nearest facility POINT, walking:
+#:            near_{facility}_walk_min (not hex-aggregated)
+#:   sfca_    two-step floating catchment ratio: sfca_{facility}_walk
+#:   transit_ transit_routes_cnt (distinct routes stopping in the hex)
+ACCESS_ID_COLUMNS = ("h3", "res", "district", "in_city")
+ACCESS_PREFIXES = ("acc_", "accpct_", "near_", "sfca_", "transit_")

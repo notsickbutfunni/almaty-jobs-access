@@ -25,7 +25,7 @@ import yaml
 from pyproj import CRS
 from pyproj.exceptions import CRSError
 
-from almaty_access.schemas import BUILDING_FUNCTIONS
+from almaty_access.schemas import BUILDING_FUNCTIONS, TRANSIT_MODES
 
 DEFAULT_CONFIG_PATH = Path("config") / "config.yaml"
 
@@ -169,6 +169,45 @@ class FeaturesConfig:
 
 
 @dataclass(frozen=True)
+class TransitAssumptionsConfig:
+    """Assumed parameters of the OSM-fallback transit network (Phase 4).
+
+    No public GTFS exists for Almaty (DECISIONS D-016), so transit travel
+    times come from OSM route relations plus these ASSUMPTIONS. They are
+    deliberately editable: anyone with real operational data (commercial
+    speeds, peak headways) should refine them here.
+    """
+
+    speeds_kmh: dict[str, float]
+    """Assumed commercial (stop-to-stop, dwell included) speed per mode."""
+    headways_min: dict[str, float]
+    """Assumed peak headway per mode; waiting time = half the headway."""
+    circuity: dict[str, float]
+    """Path distance between consecutive stops is approximated as
+    straight-line distance times this per-mode factor (>= 1). Street
+    modes wind through the grid (~1.3); metro tunnels run nearly
+    straight (~1.05)."""
+
+
+@dataclass(frozen=True)
+class AccessConfig:
+    """Phase 4 accessibility parameters (README §7 Phase 4)."""
+
+    gravity_half_life_min: float
+    """Travel time at which a job's gravity weight halves: beta = ln2/T."""
+    sfca_catchment_min: int
+    """Walk catchment (minutes) of the two-step floating catchment area."""
+    park_min_m2: float
+    """Smaller green areas do not count as park destinations (README: >1 ha)."""
+    snap_max_m: float
+    """Hexes whose centroid is farther than this from the network are
+    treated as off-network and excluded from matrices (counted in the report)."""
+    transit: TransitAssumptionsConfig
+    car_speeds_kmh: dict[str, float]
+    """Free-flow car speed by OSM highway class; must include 'default'."""
+
+
+@dataclass(frozen=True)
 class RandomForestConfig:
     """Random-forest hyperparameters for the Phase 3 job model."""
 
@@ -209,6 +248,7 @@ class Config:
     pois: PoisConfig
     features: FeaturesConfig
     model: ModelConfig
+    access: AccessConfig
     random_seed: int
     source_path: Path
     """The YAML file this configuration was loaded from. Pipeline steps
@@ -291,6 +331,9 @@ def load_config(path: str | Path = DEFAULT_CONFIG_PATH) -> Config:
         pois=_pois_from(_section(raw, "pois"), root),
         features=_features_from(_section(raw, "features")),
         model=_model_from(_section(raw, "model")),
+        access=_access_from(
+            _section(raw, "access"), _thresholds_from(travel.get("thresholds_min"))
+        ),
         random_seed=_seed_from(raw.get("random_seed")),
         source_path=resolved,
     )
@@ -666,6 +709,88 @@ def _model_from(section: dict[str, Any]) -> ModelConfig:
         training_years=training_years,
         random_forest=forest,
         quantiles=(float(quantiles_raw[0]), float(quantiles_raw[1]), float(quantiles_raw[2])),
+    )
+
+
+def _mode_numbers(value: Any, key: str) -> dict[str, float]:
+    """A mapping with a positive number for EXACTLY the transit modes."""
+    if not isinstance(value, dict) or sorted(value) != sorted(TRANSIT_MODES):
+        raise ValueError(f"config error: '{key}' must map exactly the modes {list(TRANSIT_MODES)}")
+    numbers: dict[str, float] = {}
+    for mode, number in value.items():
+        if not _is_number(number) or number <= 0:
+            raise ValueError(f"config error: '{key}.{mode}' must be a positive number")
+        numbers[str(mode)] = float(number)
+    return numbers
+
+
+def _access_from(section: dict[str, Any], thresholds_min: tuple[int, ...]) -> AccessConfig:
+    half_life = section.get("gravity_half_life_min")
+    if not _is_number(half_life) or half_life <= 0:
+        raise ValueError("config error: 'access.gravity_half_life_min' must be a positive number")
+
+    catchment = section.get("sfca_catchment_min")
+    if (
+        not isinstance(catchment, int)
+        or isinstance(catchment, bool)
+        or not (0 < catchment <= max(thresholds_min))
+    ):
+        raise ValueError(
+            "config error: 'access.sfca_catchment_min' must be a positive integer "
+            f"<= max(travel.thresholds_min) = {max(thresholds_min)} "
+            "(the catchment must fit inside the stored travel-time matrices)"
+        )
+
+    park_min = section.get("park_min_m2")
+    if not _is_number(park_min) or park_min < 0:
+        raise ValueError("config error: 'access.park_min_m2' must be a non-negative number")
+
+    snap_max = section.get("snap_max_m")
+    if not _is_number(snap_max) or snap_max <= 0:
+        raise ValueError("config error: 'access.snap_max_m' must be a positive number")
+
+    transit_raw = section.get("transit")
+    if not isinstance(transit_raw, dict):
+        raise ValueError(
+            "config error: 'access.transit' must be a mapping with "
+            "speeds_kmh, headways_min and circuity"
+        )
+    circuity = _mode_numbers(transit_raw.get("circuity"), "access.transit.circuity")
+    below_one = [mode for mode, value in circuity.items() if value < 1]
+    if below_one:
+        raise ValueError(
+            f"config error: 'access.transit.circuity' must be >= 1 for every mode "
+            f"(paths are never shorter than the straight line), got < 1 for {below_one}"
+        )
+    transit = TransitAssumptionsConfig(
+        speeds_kmh=_mode_numbers(transit_raw.get("speeds_kmh"), "access.transit.speeds_kmh"),
+        headways_min=_mode_numbers(transit_raw.get("headways_min"), "access.transit.headways_min"),
+        circuity=circuity,
+    )
+
+    car_raw = section.get("car_speeds_kmh")
+    if not isinstance(car_raw, dict) or not car_raw:
+        raise ValueError("config error: 'access.car_speeds_kmh' must map highway class -> km/h")
+    car_speeds: dict[str, float] = {}
+    for highway, speed in car_raw.items():
+        if not _is_number(speed) or speed <= 0:
+            raise ValueError(
+                f"config error: 'access.car_speeds_kmh.{highway}' must be a positive number"
+            )
+        car_speeds[str(highway)] = float(speed)
+    if "default" not in car_speeds:
+        raise ValueError(
+            "config error: 'access.car_speeds_kmh' must include a 'default' entry "
+            "(fallback for unlisted highway classes)"
+        )
+
+    return AccessConfig(
+        gravity_half_life_min=float(half_life),
+        sfca_catchment_min=catchment,
+        park_min_m2=float(park_min),
+        snap_max_m=float(snap_max),
+        transit=transit,
+        car_speeds_kmh=car_speeds,
     )
 
 

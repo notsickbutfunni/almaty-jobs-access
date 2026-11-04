@@ -56,6 +56,16 @@ def test_repo_config_is_valid(repo_config: Config) -> None:
     assert set(repo_config.model.baseline_jobs_per_100m2) >= {"commercial", "unknown"}
     assert repo_config.model.quantiles == (0.1, 0.5, 0.9)
     assert repo_config.model.random_forest.n_estimators >= 100
+    assert repo_config.access.gravity_half_life_min == pytest.approx(20.0)
+    assert repo_config.access.sfca_catchment_min <= max(repo_config.travel.thresholds_min)
+    assert set(repo_config.access.transit.speeds_kmh) == {"bus", "trolleybus", "subway"}
+    assert set(repo_config.access.transit.headways_min) == {"bus", "trolleybus", "subway"}
+    assert set(repo_config.access.transit.circuity) == {"bus", "trolleybus", "subway"}
+    assert all(value >= 1.0 for value in repo_config.access.transit.circuity.values())
+    circuity = repo_config.access.transit.circuity
+    assert circuity["subway"] < circuity["bus"]  # tunnels run straighter than streets
+    assert "default" in repo_config.access.car_speeds_kmh
+    assert repo_config.access.snap_max_m > 0
 
 
 def test_paths_resolve_against_repo_root(repo_config: Config, config_path: Path) -> None:
@@ -154,6 +164,22 @@ INVALID_CASES = [
     pytest.param(_set("model.quantiles", [0.1, 0.9]), id="quantiles-not-three"),
     pytest.param(_set("model.quantiles", [0.5, 0.1, 0.9]), id="quantiles-not-increasing"),
     pytest.param(_delete("model"), id="model-section-missing"),
+    pytest.param(_set("access.gravity_half_life_min", 0), id="half-life-zero"),
+    pytest.param(_set("access.sfca_catchment_min", 90), id="catchment-above-cutoff"),
+    pytest.param(_set("access.sfca_catchment_min", 15.5), id="catchment-not-int"),
+    pytest.param(_set("access.park_min_m2", -1), id="park-min-negative"),
+    pytest.param(_set("access.snap_max_m", 0), id="snap-max-zero"),
+    pytest.param(_set("access.transit.circuity", 1.3), id="circuity-not-a-mapping"),
+    pytest.param(_set("access.transit.circuity.subway", 0.8), id="circuity-below-one"),
+    pytest.param(_delete("access.transit.speeds_kmh.subway"), id="transit-speed-mode-missing"),
+    pytest.param(_set("access.transit.speeds_kmh.bus", -5), id="transit-speed-negative"),
+    pytest.param(
+        _set("access.transit.headways_min", {"bus": 10, "trolleybus": 12, "subway": 7, "tram": 5}),
+        id="transit-headway-unknown-mode",
+    ),
+    pytest.param(_delete("access.car_speeds_kmh.default"), id="car-speeds-no-default"),
+    pytest.param(_set("access.car_speeds_kmh.primary", 0), id="car-speed-zero"),
+    pytest.param(_delete("access"), id="access-section-missing"),
 ]
 
 

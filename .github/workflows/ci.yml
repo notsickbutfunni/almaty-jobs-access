@@ -48,3 +48,6 @@ jobs:
 
       - name: Job model on the committed sample (offline)
         run: uv run almaty-access model -c config/config.sample.yaml -v
+
+      - name: Accessibility on the committed sample (offline)
+        run: uv run almaty-access access -c config/config.sample.yaml -v
