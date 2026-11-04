@@ -77,6 +77,8 @@ so the same licences apply (ODbL for OSM-derived content):
 | `features_r8.parquet`, `features_r9.parquet` | One row per hex, identical schema at both resolutions (plain parquet; join the grid on `h3` for maps; column list and count in `features_report.json`) |
 | `subcenters.parquet` | Job sub-centres found by clustering business POIs (`in_city=False` marks buffer-zone satellite clusters) |
 | `features_report.json` | What was log-transformed, what was pruned as a near-duplicate and why, sub-centre count, seeds |
+| `jobs_r8.parquet`, `jobs_r9.parquet` | Phase 3 job estimates per hex: Model A baseline + random-forest P10/P50/P90, district totals conserved (buffer hexes carry 0) |
+| `model_report.json` | Targets and years used, LODO comparison of both models, permutation importances, jobs-per-resident ratios, top-20 hexes |
 
 ## Attribution
 

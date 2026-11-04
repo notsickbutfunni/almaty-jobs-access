@@ -52,6 +52,10 @@ def test_repo_config_is_valid(repo_config: Config) -> None:
     assert repo_config.features.context_k == (1, 2)
     assert 0 < repo_config.features.corr_threshold <= 1
     assert all(prefix for prefix in repo_config.features.log1p_prefixes)
+    assert repo_config.model.target_indicator == "payroll_jobs_located"
+    assert set(repo_config.model.baseline_jobs_per_100m2) >= {"commercial", "unknown"}
+    assert repo_config.model.quantiles == (0.1, 0.5, 0.9)
+    assert repo_config.model.random_forest.n_estimators >= 100
 
 
 def test_paths_resolve_against_repo_root(repo_config: Config, config_path: Path) -> None:
@@ -138,6 +142,18 @@ INVALID_CASES = [
     pytest.param(_set("features.context_k", [2, 1]), id="context-k-not-increasing"),
     pytest.param(_set("features.corr_threshold", 1.5), id="corr-threshold-above-one"),
     pytest.param(_delete("features"), id="features-section-missing"),
+    pytest.param(_set("model.baseline_jobs_per_100m2.commercial", -1), id="coefficient-negative"),
+    pytest.param(
+        _delete("model.baseline_jobs_per_100m2.unknown"), id="coefficient-missing-function"
+    ),
+    pytest.param(_set("model.target_year", 1999), id="target-year-out-of-range"),
+    pytest.param(_set("model.training_years", [2022, 2021]), id="training-years-not-increasing"),
+    pytest.param(_set("model.training_years", ["2021", 2022]), id="training-years-mixed-types"),
+    pytest.param(_set("model.random_forest.n_estimators", 0), id="rf-estimators-zero"),
+    pytest.param(_set("model.random_forest.max_features", 1.5), id="rf-max-features-above-one"),
+    pytest.param(_set("model.quantiles", [0.1, 0.9]), id="quantiles-not-three"),
+    pytest.param(_set("model.quantiles", [0.5, 0.1, 0.9]), id="quantiles-not-increasing"),
+    pytest.param(_delete("model"), id="model-section-missing"),
 ]
 
 

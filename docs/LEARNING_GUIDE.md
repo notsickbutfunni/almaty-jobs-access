@@ -504,3 +504,142 @@ features_report.json.
 - *Is the betweenness comparable between sample and city?* No - it is
   normalized within each graph; comparisons are valid within one run,
   which is how the model uses it.
+
+---
+
+# Phase 3 - The job-density model
+
+**What was built.** `almaty-access model` turns the 68 features and the
+official district totals into jobs per hex at r8 and r9, with a
+P10/P90 uncertainty band and a report that shows its work
+(`model_report.json`). City result: 1,091,192 jobs placed, exactly
+conserving every district total.
+
+## Dasymetric disaggregation - the one idea the phase rests on
+
+We know the WHAT (how many jobs per district, officially) but not the
+WHERE within each district. Dasymetric disaggregation splits a known
+total over small units using an auxiliary *weight surface*:
+
+    jobs_hex = total_district * weight_hex / sum(weights in district)
+
+Everything interesting is in the weights; the rescaling guarantees the
+accounting (the "pycnophylactic" or mass-preserving property). This is
+exactly how WorldPop maps population, applied to jobs.
+
+## Model A - the benchmark you must not skip
+
+Weights = GFA x a jobs-per-100-m2 coefficient per building function.
+Because of the rescaling, only the RATIOS of the coefficients matter -
+the notebook shows that doubling the commercial coefficient barely
+re-ranks hexes. A transparent baseline like this is the anchor for
+every claim the fancier model makes: beat it or explain why not.
+
+## Model B - a forest trained where the truth lives
+
+The forest cannot be trained at hex level (no hex labels exist), so it
+is trained at DISTRICT level - 8 districts x 5 years of annual
+targets - on log(jobs per km2), and then asked to predict the same
+quantity per hex. Two technical points make that legal:
+
+- **Unit consistency.** Every mass feature is converted to a density
+  per km2 at BOTH levels (a model trained on district GFA sums would
+  see hex sums ~1000x smaller and every split would misfire). Shares,
+  means and distances pass through unchanged.
+- **Static features.** The extra years do not add independent
+  feature-target pairs (OSM is a 2026 snapshot); they stabilise each
+  district target. Validation therefore holds out whole districts.
+
+## Why log of the density?
+
+Job density spans orders of magnitude; a forest trained on raw
+density would spend all its splits on the one densest district. The
+log makes relative errors comparable across districts - and
+exp(prediction) is guaranteed positive, which a weight must be.
+
+## LODO - and reading a mixed verdict honestly
+
+Leave-one-district-out: train on 7, predict the 8th, 8 times. Results
+on the city: **MAPE 34.1% (forest) vs 60.5% (baseline)** - the forest
+roughly halves the relative error, winning the README criterion. But
+the baseline keeps the lower MAE, because the forest underpredicts
+held-out Almaly (75k vs 252k): **trees cannot extrapolate** - with the
+densest district held out, nothing in training resembles it, so the
+forest predicts something like the second-densest. That is a property
+of the method, not a bug, and the honest move is to show both metrics
+and explain the mechanism. The production surface is unaffected:
+official totals pin every district, so LODO measures how well the
+density SHAPE generalises, where the forest sees business POIs,
+centrality and context that pure GFA cannot.
+
+*Interview line: "my validation metric disagreed with itself - MAPE
+said the forest, MAE said the baseline - and the resolution was
+understanding WHY (extrapolation at the extreme), not picking the
+flattering number."*
+
+## Uncertainty from the forest itself
+
+Every tree is a full model, so every tree yields a full weight
+surface; rescale each one and you get 500 complete, total-conserving
+job maps. Per-hex quantiles across them give P10/P50/P90 - wide where
+the trees disagree. The central P50 surface is rescaled once more so
+the shipped jobs_rf conserves totals exactly; the band conserves only
+approximately (stated in the code).
+
+## Explanation: permutation importance and SHAP
+
+Impurity-based importances are biased toward high-cardinality
+features; permutation importance (shuffle one feature, measure the
+damage) is the safer default and ships in the report. SHAP values
+(notebook) decompose each prediction into feature contributions. With
+40 rows and collinear features, read the GROUP of top features -
+business POI counts, commercial/large GFA, neighbourhood context -
+not the exact ranking.
+
+## Interview Q&A
+
+- *Why not train directly at hex level?* No hex labels exist. Model C
+  in the README stays open for the day a geocoded enterprise registry
+  appears; it would also validate A and B.
+- *Why is jobs-per-resident a sanity check and not a feature?* It IS
+  the production/attraction contrast (Almaly 2.17, dormitory Alatau
+  0.18) - exactly what a transport model of home-work flows needs to
+  see, and the shape our result must reproduce to be believable.
+- *Why equal-split jobs in a zero-weight district?* The official total
+  is a fact; refusing to place it would silently delete jobs. Equal
+  split is the explicit "we know nothing here" prior, and it logs.
+- *Why fix the forest hyperparameters instead of tuning?* With 8
+  districts, tuning against LODO is fitting the validator. Fixed,
+  boring values + an honest error report beat an optimised story.
+- *Why are buffer hexes zero jobs?* No official total covers them.
+  The satellite towns' employment is real but unobserved - flagged as
+  a caveat for edge-hex accessibility in Phase 4.
+
+## What the Phase 3 adversarial review caught
+
+Three confirmed majors, each a transferable lesson (full detail: D-043):
+
+- **The positivity trap.** exp(prediction) is never zero, so the
+  forest quietly placed a tenth of all city jobs on bare mountain
+  hexes - 38.6% of Medeu's total in empty terrain - because rescaling
+  must put the official total SOMEWHERE. The fix is the same one
+  WorldPop uses for population: a binary capability mask (here: has
+  floor space or POIs) multiplied into the weights. Lesson: *a
+  dasymetric weight model needs an explicit zero, because "very
+  small times a big rescale factor" is not zero.*
+- **The two-resolutions trap.** District totals were resolved at r8
+  and applied to the r9 surface; a border sliver district with r9
+  hexes but no r8 hex got silent zeros (the committed sample proved
+  it: 8 bostandyk hexes). Lesson: *when the same constraint is
+  applied at two spatial scales, derive it at each scale - edge sets
+  differ.*
+- **The untested-assumption trap.** 97% of floor counts come from
+  config defaults, and no test varied them until the review forced
+  the README 3.4 sensitivity analysis into existence. It ended well -
+  rank stability >= 0.994 under height and POI-mapping perturbations -
+  but "it ended well" was EARNED, not assumed.
+
+And one more for the record: the review demanded a leakage probe for
+LODO (poison one district x100; its held-out prediction must stay
+sane), which is now a permanent regression test. Validation code
+deserves tests as much as model code does.

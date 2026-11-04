@@ -169,6 +169,30 @@ class FeaturesConfig:
 
 
 @dataclass(frozen=True)
+class RandomForestConfig:
+    """Random-forest hyperparameters for the Phase 3 job model."""
+
+    n_estimators: int
+    min_samples_leaf: int
+    max_features: float
+    """Fraction of features tried per split, in (0, 1]."""
+
+
+@dataclass(frozen=True)
+class ModelConfig:
+    """Phase 3 job-density model parameters (README §7 Phase 3)."""
+
+    baseline_jobs_per_100m2: dict[str, float]
+    """Model A coefficients; only relative sizes matter (rescaling)."""
+    target_indicator: str
+    target_year: int
+    training_years: tuple[int, ...]
+    random_forest: RandomForestConfig
+    quantiles: tuple[float, float, float]
+    """Reported uncertainty levels across trees: low / central / high."""
+
+
+@dataclass(frozen=True)
 class Config:
     """The full, validated project configuration."""
 
@@ -184,6 +208,7 @@ class Config:
     buildings: BuildingsConfig
     pois: PoisConfig
     features: FeaturesConfig
+    model: ModelConfig
     random_seed: int
     source_path: Path
     """The YAML file this configuration was loaded from. Pipeline steps
@@ -265,6 +290,7 @@ def load_config(path: str | Path = DEFAULT_CONFIG_PATH) -> Config:
         buildings=_buildings_from(_section(raw, "buildings")),
         pois=_pois_from(_section(raw, "pois"), root),
         features=_features_from(_section(raw, "features")),
+        model=_model_from(_section(raw, "model")),
         random_seed=_seed_from(raw.get("random_seed")),
         source_path=resolved,
     )
@@ -553,6 +579,93 @@ def _features_from(section: dict[str, Any]) -> FeaturesConfig:
         context_columns=_str_tuple(section.get("context_columns"), "features.context_columns"),
         context_k=tuple(context_k),
         corr_threshold=float(threshold),
+    )
+
+
+def _model_from(section: dict[str, Any]) -> ModelConfig:
+    coefficients_raw = section.get("baseline_jobs_per_100m2")
+    if not isinstance(coefficients_raw, dict) or not coefficients_raw:
+        raise ValueError(
+            "config error: 'model.baseline_jobs_per_100m2' must map building function -> number"
+        )
+    coefficients: dict[str, float] = {}
+    for function, value in coefficients_raw.items():
+        if not _is_number(value) or value < 0:
+            raise ValueError(
+                f"config error: 'model.baseline_jobs_per_100m2.{function}' must be >= 0"
+            )
+        coefficients[str(function)] = float(value)
+    missing = [f for f in BUILDING_FUNCTIONS if f not in coefficients]
+    if missing:
+        raise ValueError(
+            f"config error: 'model.baseline_jobs_per_100m2' is missing functions: {missing}"
+        )
+    if sum(coefficients.values()) <= 0:
+        raise ValueError(
+            "config error: 'model.baseline_jobs_per_100m2' must have at least one "
+            "positive coefficient (an all-zero surface cannot be rescaled)"
+        )
+
+    def _year(value: Any, key: str) -> int:
+        if not isinstance(value, int) or isinstance(value, bool) or not (2000 <= value <= 2100):
+            raise ValueError(f"config error: '{key}' must be a year between 2000 and 2100")
+        return value
+
+    years_raw = section.get("training_years")
+    valid_years = (
+        isinstance(years_raw, list)
+        and bool(years_raw)
+        # Validate element types BEFORE comparing: a mixed list like
+        # ["2021", 2022] must give a config error, not a TypeError.
+        and all(isinstance(y, int) and not isinstance(y, bool) for y in years_raw)
+        and all(later > earlier for earlier, later in itertools.pairwise(years_raw))
+    )
+    if not valid_years:
+        raise ValueError(
+            "config error: 'model.training_years' must be a strictly increasing list of years"
+        )
+    training_years = tuple(_year(year, "model.training_years") for year in years_raw)
+
+    forest_raw = section.get("random_forest")
+    if not isinstance(forest_raw, dict):
+        raise ValueError(
+            "config error: 'model.random_forest' must be a mapping with "
+            "n_estimators, min_samples_leaf and max_features"
+        )
+    max_features = forest_raw.get("max_features")
+    if not _is_number(max_features) or not (0 < max_features <= 1):
+        raise ValueError(
+            "config error: 'model.random_forest.max_features' must be a fraction in (0, 1]"
+        )
+    forest = RandomForestConfig(
+        n_estimators=_positive_int(
+            forest_raw.get("n_estimators"), "model.random_forest.n_estimators"
+        ),
+        min_samples_leaf=_positive_int(
+            forest_raw.get("min_samples_leaf"), "model.random_forest.min_samples_leaf"
+        ),
+        max_features=float(max_features),
+    )
+
+    quantiles_raw = section.get("quantiles")
+    valid_quantiles = (
+        isinstance(quantiles_raw, list)
+        and len(quantiles_raw) == 3
+        and all(_is_number(q) and 0 < q < 1 for q in quantiles_raw)
+        and quantiles_raw[0] < quantiles_raw[1] < quantiles_raw[2]
+    )
+    if not valid_quantiles:
+        raise ValueError(
+            "config error: 'model.quantiles' must be three strictly increasing values in (0, 1)"
+        )
+
+    return ModelConfig(
+        baseline_jobs_per_100m2=coefficients,
+        target_indicator=_non_empty_str(section.get("target_indicator"), "model.target_indicator"),
+        target_year=_year(section.get("target_year"), "model.target_year"),
+        training_years=training_years,
+        random_forest=forest,
+        quantiles=(float(quantiles_raw[0]), float(quantiles_raw[1]), float(quantiles_raw[2])),
     )
 
 

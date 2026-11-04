@@ -129,5 +129,34 @@ features:
   # to r9 so both tables keep identical columns.
   corr_threshold: 0.95
 
+# Phase 3 job-density model (README §7 Phase 3).
+model:
+  # Model A: jobs per 100 m2 of GFA by building function. Only the
+  # RELATIVE sizes matter — every district is rescaled so its hex sum
+  # equals the official district total; the coefficients shape the
+  # within-district surface. Rough planning-norm magnitudes, editable.
+  baseline_jobs_per_100m2:
+    commercial: 3.0
+    industrial: 1.0
+    public: 2.5
+    residential: 0.1
+    unknown: 0.5
+  # Training target: official per-district payroll jobs (counted at the
+  # workplace), annual value = mean of the year's quarters.
+  target_indicator: payroll_jobs_located
+  # Year the final surfaces are scaled to; falls back to the latest
+  # year in district_stats.csv when absent (the synthetic sample has
+  # only one year).
+  target_year: 2025
+  # Districts x years used to train Model B (README: "use multiple
+  # years of district data"); intersected with what the CSV holds.
+  training_years: [2021, 2022, 2023, 2024, 2025]
+  random_forest:
+    n_estimators: 500
+    min_samples_leaf: 2
+    max_features: 0.5 # fraction of features tried per split
+  # Reported uncertainty levels (across trees): low / central / high.
+  quantiles: [0.1, 0.5, 0.9]
+
 # Used to seed every random number generator in the project.
 random_seed: 42

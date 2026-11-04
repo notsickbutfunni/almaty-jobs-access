@@ -439,3 +439,132 @@ Open questions for the user (Phase 2):
 - `features.subcenters` (eps 400 m / min 40 POIs / top 5) found five
   plausible sub-centres; tune and re-run if your local knowledge
   disagrees with the EDA map.
+
+## Phase 3 - Job-density model (2026-11-04)
+
+### D-035: Target = payroll_jobs_located, annual means, district-year panel
+The model disaggregates jobs AT the workplace, so the target is Taldau
+indicator 18935544 (payroll jobs located in the district), never
+employed_residents (counted at home; the difference is commuting -
+see the Phase 1 two-definitions note). Quarterly values are averaged
+per year to smooth seasonality; training uses 2021-2025 x 8 districts
+(40 rows). Honesty note: features are static 2026 OSM, so extra years
+do NOT add independent feature-target pairs - they stabilise each
+district's target. Validation therefore holds out whole districts
+(all their years), never single rows. resolve_years() intersects the
+configured years with what the CSV actually holds and falls back
+loudly (the synthetic sample has one year).
+
+### D-036: One unit system for training and prediction
+The forest trains on district rows and predicts on hex rows, so
+model/aggregate.py converts every mass feature (m2, counts, metres,
+persons, k-ring sums) to a density per km2 at BOTH levels, and
+aggregates intensities (shares, means, distances, entropy, ratios) as
+means. A feature column matching no rule raises - a future feature
+cannot silently enter the model in the wrong units. The configured
+log1p transform is applied after densitisation, identically on both
+sides.
+
+### D-037: Model A coefficients are relative weights, not estimates
+jobs per 100 m2 GFA: commercial 3.0, public 2.5, industrial 1.0,
+unknown 0.5, residential 0.1 (config). Because every district is
+rescaled to its official total, only the RATIOS shape the surface;
+the notebook's sensitivity check (commercial x0.5 / x2) confirms hex
+rankings barely move. A district whose weights sum to zero still
+holds official jobs: they are split equally over its hexes, loudly.
+
+### D-038: Model B: fixed hyperparameters, per-tree uncertainty, exact central conservation
+RandomForest(n=500, min_samples_leaf=2, max_features=0.5, seeded) on
+log(jobs/km2). Hyperparameters are set once from common practice and
+NOT tuned against LODO - with 8 districts, tuning the validator is
+self-deception. Each tree yields a surface; each is rescaled per
+district (strictly positive weights, so no zero-sum guard needed);
+P10/P90 are per-hex quantiles across the 500 rescaled surfaces, and
+the central estimate rescales the median surface once more so
+jobs_rf conserves district totals EXACTLY (the quantile bands
+conserve only approximately - recorded in the module docstring).
+
+### D-039: The LODO verdict, reported honestly
+Model B beats Model A on MAPE 34.1% vs 60.5% (README done-when: met -
+MAPE is the right headline metric when districts span 29k-255k jobs,
+and B roughly halves the error on the small dormitory districts
+where A's GFA heuristic badly overshoots). Model A keeps the lower
+MAE (46.5k vs 53.5k) and the only positive R2 (0.48 vs -0.04): the
+forest underpredicts held-out Almaly (75k vs 252k actual) because
+trees cannot extrapolate - with the densest district held out,
+nothing in training looks like it. Decision: accept and document
+rather than tune away; the production surface never uses predicted
+totals (official numbers pin every district), so LODO gauges the
+generalisation of the density SHAPE, where B has strictly more
+signal (business POIs, centrality, context) than A's GFA-only view.
+
+### D-040: Scope guards
+Buffer-ring hexes carry 0 jobs - official totals exist only for the 8
+districts; the satellite-town employment outside the boundary is
+real but unobserved, flagged for Phase 4 interpretation near the
+edge. Districts present in the stats but absent from the grid stay
+unallocated (warned). With fewer than 4 districts in the grid
+(MIN_DISTRICTS_FOR_MODEL) the forest and LODO are skipped with a
+recorded reason and the rf columns carry the baseline, keeping one
+schema everywhere (the sample exercises exactly this path in CI).
+
+### D-041: shap added as a dependency
+README 3.4 asks for SHAP (TreeExplainer); used in notebook 03 on a
+seeded refit of the same forest (models are rebuilt, never pickled
+into the repo). Permutation importance ships in the pipeline report
+(sklearn, no extra dependency).
+
+Open questions for the user (Phase 3):
+- Baseline coefficients (D-037) are editable in config; if you have
+  better planning norms for Almaty, update and re-run - rankings are
+  robust but the A-vs-B gap may shift.
+- README offers a third sample-growing route (train on enterprise
+  counts, then convert). Taldau has enterprise-count indicators; worth
+  a Phase 7 experiment if LODO stability matters for the story.
+
+### D-042: README 3.4 sensitivity implemented on three axes (review round)
+The adversarial review caught that the original notebook varied only
+Model A coefficients and that NOTHING tested the two axes the README
+names - building-height assumptions and POI category mappings - while
+97.1% of floor counts come from config default_levels (OSM levels
+tags are sparse), so nearly the whole GFA surface rests on exactly
+the untested assumption. Implemented in notebook 03: (1) coefficient
+ratios x0.5/x2; (2) height defaults varied two ways (commercial/
+public 2->3 floors; all defaults x0.75) with per-hex GFA rebuilt from
+buildings.parquet and BOTH models re-run; (3) a POI-mapping merge
+(retail_other -> grocery) with Model B refit. Stated approximations:
+variant GFA assigned by representative point; derived columns
+(large-building share, k-ring context) held at shipped values. City
+result: Spearman rank stability >= 0.994 on every variant - the
+surface is driven by the data, not by the assumptions.
+
+### D-043: Phase 3 adversarial review round - 3 confirmed majors fixed
+Same 4-lens + verification setup as Phase 2 (D-034). Fixed:
+- **r8 district set applied to the r9 surface.** District sets differ
+  per resolution at grid edges (the sample's bbox clips almaly at r8
+  while a bostandyk border sliver holds 8 in-city r9 hexes - those
+  hexes shipped with silent zeros, and in a 4-7-district bbox the
+  build would have crashed with an opaque IndexError). Totals are now
+  resolved per resolution, _rescaled_tree_surfaces raises clearly on
+  a stray district, and the report's districts_modeled /
+  districts_without_hexes are per-resolution.
+- **Jobs smeared over empty mountain hexes.** exp(prediction) is
+  strictly positive, so the forest placed 10.6% of all city jobs
+  (38.6% of Medeu's) on hexes with zero GFA, zero POIs and zero
+  population. WorldPop-style fix: a job-capable mask (GFA > 0 or
+  POIs > 0) zeroes such weights before rescaling; city jobs now live
+  on 3,800 of 5,937 r9 hexes. A district fully zeroed in some tree
+  falls back to the equal split (same prior as Model A's).
+- **README 3.4 sensitivity missing** - see D-042.
+Minors fixed: resolve_years now excludes partially reported years (a
+Q1-only current year can no longer masquerade as an annual mean; the
+rule adapts to the dataset's normal period count); the two remaining
+3.3 plausibility checks (industrial jobs-high/population-low, and
+hospital/university anchor hexes above the median) ship in the
+report; mixed-type training_years lists give a clean config error; a
+LODO leakage probe test (a x100-poisoned district must NOT be
+predicted at its poisoned scale); a synthetic 6-district end-to-end
+test now exercises the full forest path - including a district that
+exists only at r9 - so a city-only regression can no longer pass a
+green suite; the aggregate module docstring no longer claims
+share-weighted means.

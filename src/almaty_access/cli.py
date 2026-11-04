@@ -26,6 +26,7 @@ from almaty_access.download import population as dl_population
 from almaty_access.download import stats as dl_stats
 from almaty_access.features import build as feat_build
 from almaty_access.log import setup_logging
+from almaty_access.model import build as model_build
 from almaty_access.prepare import boundary as prep_boundary
 from almaty_access.prepare import buildings as prep_buildings
 from almaty_access.prepare import completeness as prep_completeness
@@ -57,7 +58,7 @@ OnlyOpt = Annotated[
     typer.Option("--only", help="Run only the named step(s); repeatable."),
 ]
 
-_PHASE_OF_STAGE = {"features": 2, "model": 3, "access": 4, "equity": 5, "report": 8}
+_PHASE_OF_STAGE = {"access": 4, "equity": 5, "report": 8}
 
 StepFunc = Callable[..., object]
 
@@ -265,10 +266,19 @@ def features(
 
 
 @app.command()
-def model(config: ConfigOpt = DEFAULT_CONFIG, verbose: VerboseOpt = False) -> None:
-    """Estimate jobs per hex: baseline + random-forest dasymetric. [Phase 3]"""
-    _load_and_seed(config, verbose)
-    _exit_not_implemented("model")
+def model(
+    config: ConfigOpt = DEFAULT_CONFIG,
+    force: ForceOpt = False,
+    verbose: VerboseOpt = False,
+) -> None:
+    """Estimate jobs per hex: baseline + random-forest dasymetric. [Phase 3]
+
+    Writes jobs_r{8,9}.parquet and model_report.json into
+    data/processed/. Requires `almaty-access features` to have run and
+    district_stats.csv to exist (download --only stats).
+    """
+    cfg = _load_and_seed(config, verbose)
+    _run_steps({"model": model_build.build_model}, cfg, only=None, force=force, verbose=verbose)
 
 
 @app.command()

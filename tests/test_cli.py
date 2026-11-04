@@ -16,7 +16,6 @@ PIPELINE_COMMANDS = ("download", "prepare", "features", "model", "access", "equi
 UTILITY_COMMANDS = ("info", "sample")
 
 STAGE_PHASES = {
-    "model": 3,
     "access": 4,
     "equity": 5,
     "report": 8,
@@ -103,5 +102,10 @@ def test_features_with_missing_inputs_exits_cleanly(tmp_path: Path) -> None:
     config_file.write_text(yaml.safe_dump(raw, allow_unicode=True), encoding="utf-8")
 
     result = runner.invoke(app, ["features", "--config", str(config_file)])
+    assert result.exit_code == 1
+    assert "failed" in result.output
+
+    # Same contract for the Phase 3 model command.
+    result = runner.invoke(app, ["model", "--config", str(config_file)])
     assert result.exit_code == 1
     assert "failed" in result.output

@@ -139,3 +139,19 @@ FEATURE_PREFIXES = ("bf_", "poi_", "lu_", "net_", "tr_", "pop_", "cent_", "ter_"
 #: as a distance target (real jobs for edge hexes) but not an Almaty
 #: sub-centre in the administrative sense.
 PROCESSED_SUBCENTERS = ("subcenter_id", "n_pois", "in_city", "geometry")
+
+#: jobs_r{res}.parquet — Phase 3 job estimates per hex (plain parquet,
+#: join the grid on h3 for maps). Buffer-ring hexes carry 0 jobs:
+#: official totals exist only for the 8 districts. jobs_rf is the
+#: central estimate (median across trees, district-rescaled); p10/p90
+#: bound it from the forest spread.
+PROCESSED_JOBS = (
+    "h3",
+    "res",
+    "district",
+    "in_city",
+    "jobs_baseline",
+    "jobs_rf",
+    "jobs_rf_p10",
+    "jobs_rf_p90",
+)
