@@ -1,7 +1,7 @@
 """End-to-end Phase 4 test on the committed sample (offline).
 
-Runs the full chain prepare -> features -> model -> access into tmp once
-and checks schemas, invariants (threshold monotonicity, transit never
+Reads the session-wide sample run (prepare -> features -> model -> access,
+see conftest.sample_pipeline) and checks schemas, invariants (threshold monotonicity, transit never
 slower than walking, percentages bounded), the report contract and
 caching. A second fixture empties the transit tables to pin down the
 documented degraded path (no routes -> empty matrix, zero columns).
@@ -21,45 +21,16 @@ import pytest
 
 from almaty_access import schemas
 from almaty_access.access.build import build_measures, build_times
-from almaty_access.config import Config, PathsConfig
-from almaty_access.features.build import build_features
-from almaty_access.model.build import build_model
-from almaty_access.prepare.boundary import prepare_boundary
-from almaty_access.prepare.buildings import prepare_buildings
-from almaty_access.prepare.dem import prepare_dem
-from almaty_access.prepare.network import prepare_networks
-from almaty_access.prepare.pois import prepare_pois
-from almaty_access.prepare.population import prepare_population
-from almaty_access.prepare.transit import LEGS_FILE, ROUTES_FILE, STOPS_FILE, prepare_transit
+from almaty_access.config import Config
+from almaty_access.prepare.transit import LEGS_FILE, ROUTES_FILE, STOPS_FILE
 
 MODES_R8 = ("walk", "bike", "transit", "car")
 
 
 @pytest.fixture(scope="module")
-def accessed(sample_config: Config, tmp_path_factory: pytest.TempPathFactory) -> Config:
-    """Run the whole pipeline on the sample into tmp once."""
-    tmp = tmp_path_factory.mktemp("access_run")
-    paths = PathsConfig(
-        root=sample_config.paths.root,
-        raw=sample_config.paths.raw,
-        interim=tmp / "interim",
-        processed=tmp / "processed",
-        sample=sample_config.paths.sample,
-        figures=tmp / "figures",
-    )
-    config = dataclasses.replace(sample_config, paths=paths)
-    prepare_boundary(config)
-    prepare_dem(config)
-    prepare_pois(config)
-    prepare_buildings(config)
-    prepare_population(config)
-    prepare_networks(config)
-    prepare_transit(config)
-    build_features(config)
-    build_model(config)
-    build_times(config)
-    build_measures(config)
-    return config
+def accessed(sample_pipeline: Config) -> Config:
+    """The shared session-wide sample run (see conftest.sample_pipeline)."""
+    return sample_pipeline
 
 
 def _tt(config: Config, mode: str, res: int) -> pd.DataFrame:

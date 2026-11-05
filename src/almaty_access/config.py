@@ -25,7 +25,7 @@ import yaml
 from pyproj import CRS
 from pyproj.exceptions import CRSError
 
-from almaty_access.schemas import BUILDING_FUNCTIONS, TRANSIT_MODES
+from almaty_access.schemas import BUILDING_FUNCTIONS, EQUITY_BENEFIT_PREFIXES, TRANSIT_MODES
 
 DEFAULT_CONFIG_PATH = Path("config") / "config.yaml"
 
@@ -232,6 +232,40 @@ class ModelConfig:
 
 
 @dataclass(frozen=True)
+class EquityConfig:
+    """Phase 5 equity and spatial-statistics parameters (README §7 Phase 5)."""
+
+    min_population: float
+    """Hexes with fewer residents are uninhabited: they join no
+    distribution, LISA run or desert ranking (equity is about people)."""
+    headline_analysis: tuple[str, ...]
+    """Benefit columns of the ANALYSIS-resolution access table that get
+    the full treatment (Lorenz curve, district table, LISA, deserts,
+    bivariate classes). The FIRST entry drives the one-sentence result."""
+    headline_fine: tuple[str, ...]
+    """The same for the FINE-resolution table — walking and service
+    measures, which are granularity noise at the coarse resolution."""
+    lisa_permutations: int
+    lisa_alpha: float
+    """Significance level for LISA pseudo p-values (two-sided)."""
+    desert_pop_quantile: float
+    desert_access_quantile: float
+    """Access desert = population above the first quantile (across
+    hexes) AND access at or below the second, taken across RESIDENTS
+    (README: 75th / 25th percentile; DECISIONS D-055)."""
+    job_share_cutoffs_pct: tuple[float, ...]
+    """'Share of residents reaching fewer than X% of city jobs' cutoffs."""
+    headline_cutoff_pct: float
+    """The cutoff quoted in the one-sentence result (one of the above)."""
+    nearest_thresholds_min: tuple[int, ...]
+    """Walking-time thresholds for 'share of residents within T minutes
+    of the nearest facility'."""
+    center_distance_bands_km: tuple[float, ...]
+    """Upper edges of the distance-to-centre bands (a last open band
+    collects everything beyond)."""
+
+
+@dataclass(frozen=True)
 class Config:
     """The full, validated project configuration."""
 
@@ -249,6 +283,7 @@ class Config:
     features: FeaturesConfig
     model: ModelConfig
     access: AccessConfig
+    equity: EquityConfig
     random_seed: int
     source_path: Path
     """The YAML file this configuration was loaded from. Pipeline steps
@@ -334,6 +369,7 @@ def load_config(path: str | Path = DEFAULT_CONFIG_PATH) -> Config:
         access=_access_from(
             _section(raw, "access"), _thresholds_from(travel.get("thresholds_min"))
         ),
+        equity=_equity_from(_section(raw, "equity")),
         random_seed=_seed_from(raw.get("random_seed")),
         source_path=resolved,
     )
@@ -791,6 +827,115 @@ def _access_from(section: dict[str, Any], thresholds_min: tuple[int, ...]) -> Ac
         snap_max_m=float(snap_max),
         transit=transit,
         car_speeds_kmh=car_speeds,
+    )
+
+
+def _increasing_numbers(value: Any, key: str, *, upper: float | None = None) -> tuple[float, ...]:
+    """A non-empty, strictly increasing list of positive numbers (<= upper)."""
+    valid = (
+        isinstance(value, list)
+        and bool(value)
+        and all(_is_number(v) and v > 0 for v in value)
+        and all(later > earlier for earlier, later in itertools.pairwise(value))
+        and (upper is None or value[-1] <= upper)
+    )
+    if not valid:
+        bound = "" if upper is None else f" (at most {upper:g})"
+        raise ValueError(
+            f"config error: '{key}' must be a strictly increasing list of positive numbers{bound}"
+        )
+    return tuple(float(v) for v in value)
+
+
+def _open_unit_fraction(value: Any, key: str) -> float:
+    if not _is_number(value) or not (0 < value < 1):
+        raise ValueError(f"config error: '{key}' must be a number strictly between 0 and 1")
+    return float(value)
+
+
+def _equity_from(section: dict[str, Any]) -> EquityConfig:
+    min_population = section.get("min_population")
+    if not _is_number(min_population) or min_population <= 0:
+        raise ValueError(
+            "config error: 'equity.min_population' must be a positive number "
+            "(zero-resident hexes carry no weight in any population-weighted measure)"
+        )
+
+    headline_raw = section.get("headline_measures")
+    if not isinstance(headline_raw, dict) or sorted(headline_raw) != ["analysis", "fine"]:
+        raise ValueError(
+            "config error: 'equity.headline_measures' must be a mapping with exactly "
+            "the keys 'analysis' and 'fine' (one measure list per H3 resolution)"
+        )
+    headline: dict[str, tuple[str, ...]] = {}
+    for level in ("analysis", "fine"):
+        key = f"equity.headline_measures.{level}"
+        measures = _str_tuple(headline_raw.get(level), key)
+        not_benefit = [m for m in measures if not m.startswith(EQUITY_BENEFIT_PREFIXES)]
+        if not_benefit:
+            raise ValueError(
+                f"config error: '{key}' entries must be benefit columns starting with one "
+                f"of {list(EQUITY_BENEFIT_PREFIXES)} (more = better); got {not_benefit}"
+            )
+        headline[level] = measures
+
+    permutations = section.get("lisa_permutations")
+    if not isinstance(permutations, int) or isinstance(permutations, bool) or permutations < 99:
+        raise ValueError(
+            "config error: 'equity.lisa_permutations' must be an integer >= 99 "
+            "(fewer permutations cannot resolve p-values below 0.01)"
+        )
+    alpha = section.get("lisa_alpha")
+    if not _is_number(alpha) or not (0 < alpha <= 0.5):
+        raise ValueError("config error: 'equity.lisa_alpha' must be a number in (0, 0.5]")
+    smallest_p = 2.0 / (permutations + 1)  # two-sided pseudo p-values
+    if alpha < smallest_p:
+        raise ValueError(
+            "config error: 'equity.lisa_alpha' is below the smallest two-sided pseudo "
+            f"p-value 2/(permutations+1) = {smallest_p:.4f}; nothing could ever be significant"
+        )
+
+    cutoffs = _increasing_numbers(
+        section.get("job_share_cutoffs_pct"), "equity.job_share_cutoffs_pct", upper=100.0
+    )
+    headline_cutoff = section.get("headline_cutoff_pct")
+    if not _is_number(headline_cutoff) or float(headline_cutoff) not in cutoffs:
+        raise ValueError(
+            "config error: 'equity.headline_cutoff_pct' must be one of "
+            f"'equity.job_share_cutoffs_pct' {list(cutoffs)}"
+        )
+
+    thresholds = section.get("nearest_thresholds_min")
+    valid_thresholds = (
+        isinstance(thresholds, list)
+        and bool(thresholds)
+        and all(isinstance(t, int) and not isinstance(t, bool) and t > 0 for t in thresholds)
+        and all(later > earlier for earlier, later in itertools.pairwise(thresholds))
+    )
+    if not valid_thresholds:
+        raise ValueError(
+            "config error: 'equity.nearest_thresholds_min' must be a strictly increasing "
+            "list of positive integers"
+        )
+
+    return EquityConfig(
+        min_population=float(min_population),
+        headline_analysis=headline["analysis"],
+        headline_fine=headline["fine"],
+        lisa_permutations=permutations,
+        lisa_alpha=float(alpha),
+        desert_pop_quantile=_open_unit_fraction(
+            section.get("desert_pop_quantile"), "equity.desert_pop_quantile"
+        ),
+        desert_access_quantile=_open_unit_fraction(
+            section.get("desert_access_quantile"), "equity.desert_access_quantile"
+        ),
+        job_share_cutoffs_pct=cutoffs,
+        headline_cutoff_pct=float(headline_cutoff),
+        nearest_thresholds_min=tuple(thresholds),
+        center_distance_bands_km=_increasing_numbers(
+            section.get("center_distance_bands_km"), "equity.center_distance_bands_km"
+        ),
     )
 
 

@@ -17,39 +17,14 @@ import pytest
 
 from almaty_access import schemas
 from almaty_access.config import Config, DistrictConfig, PathsConfig, RandomForestConfig
-from almaty_access.features.build import build_features
 from almaty_access.model.build import build_model
 from almaty_access.model.target import load_district_targets
-from almaty_access.prepare.boundary import prepare_boundary
-from almaty_access.prepare.buildings import prepare_buildings
-from almaty_access.prepare.dem import prepare_dem
-from almaty_access.prepare.network import prepare_networks
-from almaty_access.prepare.pois import prepare_pois
-from almaty_access.prepare.population import prepare_population
 
 
 @pytest.fixture(scope="module")
-def modeled(sample_config: Config, tmp_path_factory: pytest.TempPathFactory) -> Config:
-    """Run prepare + features + model on the sample into tmp once."""
-    tmp = tmp_path_factory.mktemp("model_run")
-    paths = PathsConfig(
-        root=sample_config.paths.root,
-        raw=sample_config.paths.raw,
-        interim=tmp / "interim",
-        processed=tmp / "processed",
-        sample=sample_config.paths.sample,
-        figures=tmp / "figures",
-    )
-    config = dataclasses.replace(sample_config, paths=paths)
-    prepare_boundary(config)
-    prepare_dem(config)
-    prepare_pois(config)
-    prepare_buildings(config)
-    prepare_population(config)
-    prepare_networks(config)
-    build_features(config)
-    build_model(config)
-    return config
+def modeled(sample_pipeline: Config) -> Config:
+    """The shared session-wide sample run (see conftest.sample_pipeline)."""
+    return sample_pipeline
 
 
 def test_outputs_exist_with_schema(modeled: Config) -> None:

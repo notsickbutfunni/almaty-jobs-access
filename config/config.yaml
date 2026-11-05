@@ -202,5 +202,56 @@ access:
     service: 20
     default: 30
 
+# Phase 5 equity and spatial statistics (README §7 Phase 5).
+equity:
+  # A hex with fewer residents is uninhabited: it joins no distribution,
+  # LISA run or desert ranking (equity is about people, and an empty
+  # mountain cell with zero access is not an injustice).
+  min_population: 1
+  # Every statistic is produced under two population weightings (the
+  # raster, and the raster calibrated to the district shares of
+  # employed residents in district_stats.csv - DECISIONS D-058).
+  # Benefit measures (more = better) that get the full treatment: Lorenz
+  # curve, district table, LISA, deserts, bivariate classes - one list
+  # per H3 resolution, each naming columns of THAT access table.
+  # 'analysis' (r8) compares the four modes; its FIRST entry drives the
+  # one-sentence result. Transit is the approximate lower-bound layer
+  # (DECISIONS D-044): every transit statement carries that caveat.
+  # 'fine' (r9) holds walking and the service measures, which are
+  # granularity noise at r8 (D-049) and independent of the transit layer.
+  headline_measures:
+    analysis:
+      - accpct_jobs_transit_45
+      - accpct_jobs_car_45
+      - accpct_jobs_bike_45
+      - accpct_jobs_walk_30
+    fine:
+      - accpct_jobs_walk_30
+      - sfca_schools_walk
+      - sfca_kindergartens_walk
+      - sfca_clinics_walk
+  # LISA (local Moran): conditional permutations and the significance
+  # level applied to the two-sided pseudo p-values.
+  lisa_permutations: 9999
+  lisa_alpha: 0.05
+  # Access desert (README: population above the 75th percentile and
+  # accessibility below the 25th). Population: quantile across inhabited
+  # hexes ("dense hexes"). Access: at or below the population-WEIGHTED
+  # quantile - "the worst-served quarter of residents". The unweighted
+  # hex quantile is set by near-empty outskirts and flags almost no
+  # hex for the headline job measures; its count is reported beside
+  # every result (DECISIONS D-055).
+  desert_pop_quantile: 0.75
+  desert_access_quantile: 0.25
+  # "Share of residents who can reach fewer than X% of city jobs":
+  # reported for every cutoff; the headline sentence quotes one of them.
+  job_share_cutoffs_pct: [1, 5, 10, 25]
+  headline_cutoff_pct: 5
+  # "Share of residents within T walking minutes of the nearest ...".
+  nearest_thresholds_min: [10, 15, 20, 30]
+  # Distance-to-centre bands (upper edges, km; one open band beyond) for
+  # the access gradient - the one socio-economic proxy open data supports.
+  center_distance_bands_km: [2.5, 5, 7.5, 10, 15]
+
 # Used to seed every random number generator in the project.
 random_seed: 42

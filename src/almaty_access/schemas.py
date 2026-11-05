@@ -210,3 +210,115 @@ PROCESSED_TT = ("origin_h3", "dest_h3", "minutes")
 #:   transit_ transit_routes_cnt (distinct routes stopping in the hex)
 ACCESS_ID_COLUMNS = ("h3", "res", "district", "in_city")
 ACCESS_PREFIXES = ("acc_", "accpct_", "near_", "sfca_", "transit_")
+
+# ---------------------------------------------------------------------------
+# Processed layers (data/processed/, written by `almaty-access equity`)
+# ---------------------------------------------------------------------------
+
+#: Access columns where MORE is better; only these get Gini / Lorenz /
+#: Palma, LISA, deserts and bivariate classes. Minutes-to-nearest
+#: (near_*) run the other way and get threshold-share tables instead.
+EQUITY_BENEFIT_PREFIXES = ("acc_", "accpct_", "sfca_")
+
+#: Population weightings every Phase 5 statistic is produced under:
+#: the Kontur raster as it is, and the raster rescaled so district
+#: totals follow the district shares of employed residents in the
+#: statistics file (DECISIONS D-058). The second is absent when no such
+#: series exists.
+EQUITY_WEIGHTINGS = ("raster", "calibrated")
+
+#: equity_r{res}.parquet (raster weights) and
+#: equity_calibrated_r{res}.parquet (calibrated weights) — one row per
+#: grid hex, identical layout (plain parquet, join the grid on h3 for
+#: maps). ``population`` is the resident count under that weighting;
+#: ``inhabited`` marks in-city hexes at or above equity.min_population
+#: on the RASTER (one domain for both files); ``point_mass`` flags a
+#: fine-resolution hex that received (almost) all residents of its
+#: coarse parent although its siblings are built up too — an artifact
+#: of the residential-floor-area split, not a real concentration.
+#: After the identifier columns every column starts with one of:
+#:   modegap_  modegap_transit_car_{T}: transit / car job access ratio
+#:             (low = car-dependent); NaN where car access is zero
+#:   lisa_     LISA cluster of a headline measure: HH (hot spot), LL
+#:             (cold spot), HL, LH, ns (not significant), island (no
+#:             inhabited neighbour); NA outside the inhabited domain
+#:   lisap_    its tie-aware two-sided pseudo p-value
+#:   desert_   True for a dense hex among the worst served: population
+#:             above its hex quantile AND access at or below the
+#:             population-weighted access quantile (D-055)
+#:   biv_      3x3 bivariate class "{population tercile}-{access
+#:             tercile}", 1 = low ... 3 = high; "3-1" = a dense hex
+#:             among the worst-served third of residents
+#: The calibrated file of the FINE resolution additionally carries the
+#: 2SFCA values recomputed with calibrated demand (sfca_*), because
+#: those differ from the access table's. (2SFCA is analysed at the fine
+#: resolution only, so the coarse calibrated file has no such columns.)
+EQUITY_ID_COLUMNS = ("h3", "res", "district", "in_city", "population", "inhabited", "point_mass")
+EQUITY_PREFIXES = ("modegap_", "lisa_", "lisap_", "desert_", "biv_")
+EQUITY_CALIBRATED_VALUE_PREFIXES = ("sfca_",)
+
+#: The long tables below share the leading ``res`` and ``weights``
+#: columns; ``weights`` is one of EQUITY_WEIGHTINGS.
+
+#: equity_summary.parquet — population-weighted distribution of the
+#: benefit measures over inhabited hexes: job measures at the analysis
+#: resolution, everything at the fine one (service measures are
+#: granularity noise on coarse hexes, D-049). ``palma`` is inf when the
+#: bottom 40% of residents hold nothing, NaN when the total is zero.
+PROCESSED_EQUITY_SUMMARY = (
+    "res",
+    "weights",
+    "measure",
+    "n_hexes",
+    "population",
+    "mean",
+    "median",
+    "p10",
+    "p90",
+    "gini",
+    "palma",
+    "pop_share_zero",
+)
+
+#: equity_lorenz.parquet — Lorenz curve of each headline measure on a
+#: regular population grid (exact: the curve is piecewise linear).
+PROCESSED_EQUITY_LORENZ = ("res", "weights", "measure", "pop_share", "access_share")
+
+#: equity_districts.parquet — population-weighted mean / median of each
+#: headline measure per district; rank 1 = highest weighted mean.
+PROCESSED_EQUITY_DISTRICTS = (
+    "res",
+    "weights",
+    "measure",
+    "district",
+    "population",
+    "mean",
+    "median",
+    "rank",
+)
+
+#: equity_deserts.parquet — access-desert hexes per headline measure,
+#: rank 1 = most residents affected under that weighting.
+PROCESSED_EQUITY_DESERTS = (
+    "res",
+    "weights",
+    "measure",
+    "rank",
+    "h3",
+    "district",
+    "population",
+    "value",
+    "point_mass",
+)
+
+#: equity_nearest.parquet — share of residents within T walking minutes
+#: of the nearest facility (unreachable / off-network counts as beyond);
+#: ``district`` is "ALL" for the city-wide rows.
+PROCESSED_EQUITY_NEAREST = (
+    "res",
+    "weights",
+    "district",
+    "facility",
+    "threshold_min",
+    "pop_share_within",
+)

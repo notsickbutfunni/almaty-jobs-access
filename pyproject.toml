@@ -26,6 +26,8 @@ dependencies = [
     "scikit-learn>=1.9.1",
     "networkx>=3.7",
     "shap>=0.54.1",
+    "libpysal>=4.15.1",
+    "esda>=2.10.0",
 ]
 
 [project.scripts]

@@ -131,4 +131,27 @@ access:
     service: 20
     default: 30
 
+# Mirrors config/config.yaml (see the comments there).
+equity:
+  min_population: 1
+  headline_measures:
+    analysis:
+      - accpct_jobs_transit_45
+      - accpct_jobs_car_45
+      - accpct_jobs_bike_45
+      - accpct_jobs_walk_30
+    fine:
+      - accpct_jobs_walk_30
+      - sfca_schools_walk
+      - sfca_kindergartens_walk
+      - sfca_clinics_walk
+  lisa_permutations: 999
+  lisa_alpha: 0.05
+  desert_pop_quantile: 0.75
+  desert_access_quantile: 0.25
+  job_share_cutoffs_pct: [1, 5, 10, 25]
+  headline_cutoff_pct: 5
+  nearest_thresholds_min: [10, 15, 20, 30]
+  center_distance_bands_km: [2.5, 5, 7.5, 10, 15]
+
 random_seed: 42

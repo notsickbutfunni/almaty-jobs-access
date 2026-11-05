@@ -106,6 +106,30 @@ are approximate transit access** (assumed speeds/headways, see
 | `access_r8.parquet`, `access_r9.parquet` | Per-hex accessibility: cumulative jobs by mode x threshold, gravity access, % of city jobs, service counts on foot, 2SFCA per 1,000 residents, routes-per-hex (column conventions in `schemas.py`; note `near_*` measures to the facility point while `acc_*` is hex-aggregated — use r9 for short-threshold service claims) |
 | `tt_stats.json`, `access_report.json` | Snap statistics per mode, assumed-parameter echo, transit network counts, coverage, gravity half-life sensitivity, 10 spot-check OD pairs |
 
+## Equity outputs (Phase 5)
+
+Written by `almaty-access equity` into `processed/`. All statistics
+cover **inhabited city hexes** and weight them by residents. Because the
+population raster is skewed between districts, everything is produced
+under **two weightings**: `raster` (Kontur as prepared in Phase 1) and
+`calibrated` (hex residents rescaled so district totals follow the
+district shares of employed residents; 2SFCA is recomputed with the
+calibrated residents as demand). Long tables carry a `weights` column;
+there is one per-hex file per weighting. Transit figures inherit the
+approximate lower-bound caveat, and the report states how much of the
+"transit" layer is really walking.
+
+| File | Contents |
+|---|---|
+| `equity_r8.parquet`, `equity_r9.parquet` | Per-hex layers on the raster weights: residents, `inhabited`, the `point_mass` flag (fine hexes that received a whole coarse parent's residents), transit/car mode gap (r8), and for each headline measure the LISA cluster + p-value, desert flag and 3x3 bivariate class (column conventions in `schemas.py`) |
+| `equity_calibrated_r8.parquet`, `equity_calibrated_r9.parquet` | The same layers under the calibrated weights; the r9 file also carries the 2SFCA values recomputed with calibrated demand (`sfca_*` — 2SFCA is analysed at r9 only). Both are absent when no residence-based series exists |
+| `equity_summary.parquet` | Population-weighted mean, median, 10th / 90th percentile (`p10`, `p90`), Gini, Palma and zero-share per weighting: job measures at r8, every benefit measure at r9 |
+| `equity_lorenz.parquet` | Lorenz curves of the headline measures (101 points each) |
+| `equity_districts.parquet` | Population-weighted mean / median per district and the district ranking |
+| `equity_deserts.parquet` | Access-desert hexes per headline measure and weighting, ranked by residents, with the `point_mass` flag |
+| `equity_nearest.parquet` | Share of residents within 10 / 15 / 20 / 30 walking minutes of the nearest facility, city-wide (`district = "ALL"`) and per district |
+| `equity_report.json` | Parameters, caveats (generated from the data), the calibration (source quoted verbatim, `synthetic` flag, year, district factors), one result block per weighting and resolution (cutoff shares, Moran / LISA with FDR counts and the `borderline` hexes within Monte Carlo error of alpha, deserts, mode gap, transit coverage, nearest-facility summary, centre gradient), a raster-vs-calibrated `comparison`, and the one-sentence result |
+
 ## Attribution
 
 - **OpenStreetMap** (and OSM-derived layers, Overture buildings):

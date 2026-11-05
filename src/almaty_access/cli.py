@@ -1,11 +1,11 @@
 """Command-line interface: ``almaty-access``.
 
-Each sub-command is one pipeline stage (README §6-§7). ``download`` and
-``prepare`` are real since Phase 1 and run their steps in dependency
-order with make-style caching (``--force`` rebuilds, ``--only`` selects
-steps). Stages of later phases validate the configuration, then exit
-with code 2 and point at their phase. Exit codes: 0 success, 1 config
-or pipeline error, 2 stage not implemented yet.
+Each sub-command is one pipeline stage (README §6-§7): ``download`` →
+``prepare`` → ``features`` → ``model`` → ``access`` → ``equity``, each
+with make-style caching (``--force`` rebuilds; multi-step stages take
+``--only``). Stages of later phases validate the configuration, then
+exit with code 2 and point at their phase. Exit codes: 0 success,
+1 config or pipeline error, 2 stage not implemented yet.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from almaty_access.download import dem as dl_dem
 from almaty_access.download import osm as dl_osm
 from almaty_access.download import population as dl_population
 from almaty_access.download import stats as dl_stats
+from almaty_access.equity import build as equity_build
 from almaty_access.features import build as feat_build
 from almaty_access.log import setup_logging
 from almaty_access.model import build as model_build
@@ -60,7 +61,7 @@ OnlyOpt = Annotated[
     typer.Option("--only", help="Run only the named step(s); repeatable."),
 ]
 
-_PHASE_OF_STAGE = {"equity": 5, "report": 8}
+_PHASE_OF_STAGE = {"report": 8}
 
 StepFunc = Callable[..., object]
 
@@ -151,7 +152,7 @@ def _exit_not_implemented(stage: str) -> None:
     phase = _PHASE_OF_STAGE[stage]
     typer.secho(
         f"'{stage}' is not implemented yet: it arrives in Phase {phase} (README section 7). "
-        "Available today: info, sample, download, prepare.",
+        "Run `almaty-access --help` for the stages available today.",
         fg=typer.colors.YELLOW,
     )
     raise typer.Exit(code=2)
@@ -309,10 +310,24 @@ def access(
 
 
 @app.command()
-def equity(config: ConfigOpt = DEFAULT_CONFIG, verbose: VerboseOpt = False) -> None:
-    """Equity metrics and spatial statistics: Gini, Palma, LISA. [Phase 5]"""
-    _load_and_seed(config, verbose)
-    _exit_not_implemented("equity")
+def equity(
+    config: ConfigOpt = DEFAULT_CONFIG,
+    force: ForceOpt = False,
+    verbose: VerboseOpt = False,
+) -> None:
+    """Equity metrics and spatial statistics: Gini, Palma, LISA. [Phase 5]
+
+    Writes equity_r{8,9}.parquet and equity_calibrated_r{8,9}.parquet
+    (per-hex mode gap, LISA clusters, deserts, bivariate classes under
+    the raster and the district-calibrated population weights), the
+    summary / Lorenz / district / desert / nearest tables and
+    equity_report.json (with the one-sentence result) into
+    data/processed/. Requires `almaty-access access` to have run.
+    Statistics cover inhabited city hexes only; transit statements
+    inherit the approximate lower-bound caveat.
+    """
+    cfg = _load_and_seed(config, verbose)
+    _run_steps({"equity": equity_build.build_equity}, cfg, only=None, force=force, verbose=verbose)
 
 
 @app.command()

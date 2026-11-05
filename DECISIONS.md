@@ -759,3 +759,446 @@ for a timetable path; per-mode circuity pinned by an exact-seconds
 test; interval-tag headway precedence asserted end-to-end on the
 committed sample; INTERIM_TRANSIT_* schema constants now asserted and
 used by the writer itself.
+
+## Phase 5 - Equity and spatial statistics (2026-11-05)
+
+### D-053: Domain = inhabited city hexes; headline measures per resolution
+Equity is about people, so every statistic covers in-city hexes with at
+least `equity.min_population` (1) raster residents: 712 r8 hexes holding
+1,523,203 residents and 3,329 r9 hexes holding 1,494,892 (99.994% of the
+r9 in-city total). The two totals differ because r8 hexes on the city
+edge count whole. An empty mountain cell with zero access is not an
+injustice and joins nothing. Headline measures - the ones that get
+Lorenz curves, district tables, LISA, deserts and bivariate classes -
+are listed PER RESOLUTION in config: r8 compares the four modes (transit
+45, car 45, bike 45, walk 30 min, as % of city jobs); r9 holds walking
+and the three 2SFCA services. Service measures are granularity noise on
+coarse hexes (D-049: at r8, 54-66% of residents sat on a 2SFCA of zero
+and the Palma ratio was infinite), so `equity_summary` covers job
+measures only at r8 and everything at r9. A measure named for a
+resolution must exist in THAT table, so a typo fails before anything is
+written.
+
+### D-054: Inequality measures - exact on the piecewise-linear Lorenz curve
+Every resident of a hex is assigned the hex's accessibility; hexes are
+weighted by residents. Sorting residents from worst to best served and
+accumulating people and access gives a Lorenz curve that is exactly
+piecewise linear (one vertex per hex), so Gini (twice the area to the
+diagonal) and Palma (access share of the best-served 10% over the
+worst-served 40%, read off the same curve) are exact, not grid
+approximations. Weighted quantiles are the inverse weighted CDF,
+compared on raw cumulative weights with a relative tolerance (five
+weights of 0.3 at the 20th percentile: 0.2 x 1.5 evaluates to
+0.30000000000000004, a hair above the first cumulative weight 0.3, and
+without the tolerance the answer skips the first hex). Tests pin the
+definitions three ways: hand-computed cases, the equivalence "a hex of
+w residents = w one-resident hexes", and the textbook
+mean-absolute-difference formula. Only BENEFIT measures (acc_, accpct_,
+sfca_) get these statistics; minutes-to-nearest run the other way and
+get share-of-residents-within-T tables, where a missing time
+(off-network, unreachable) counts as beyond every threshold rather than
+dropping the worst-served from the denominator.
+Results at r8, raster -> calibrated weights (D-058): Gini 0.005 -> 0.004
+car / 0.25 -> 0.23 bike / 0.62 -> 0.59 transit / 0.63 -> 0.60 walk;
+Palma (raster) 0.25 / 0.76 / 8.0 / 8.7. Free-flow car access is almost
+perfectly equal; walking and (approximate) transit access are held by
+few.
+
+### D-055: Desert rule - dense hexes among the worst-served quarter of residents
+README: "population above the 75th percentile and accessibility below
+the 25th percentile". Read literally (both percentiles across hexes) the
+rule flags almost nothing for the headline job measures: 0, 0, 0 and 1
+of 712 r8 hexes (transit, car, bike, walk) and, for walking at r9, 10
+of 3,329 (12 with calibrated residents). The access percentile across
+hexes is set by the many near-empty outskirt cells, far below anything
+a dense hex experiences. (It is not empty in general - the 15-minute
+walk and transit measures flag 22 r8 hexes each - so this is a property
+of these measures, not a theorem.) Adopted reading:
+population above the 75th percentile across hexes (density is a
+property of the hex) AND access at or below the population-WEIGHTED
+25th percentile (the level under which the worst-served quarter of
+residents live). The literal count ships beside every result
+(`n_hexes_literal_rule`), computed with the SAME `<=` comparison so the
+two differ only through the weighting of the quantile; for
+zero-inflated 2SFCA both thresholds are 0 and the two rules coincide,
+and `pop_share_at_or_below_access_threshold` says how many residents
+share the bottom value (52% for kindergartens, 45% calibrated) instead
+of pretending it is a clean quarter. A measure with no meaningful low
+tail reports no deserts at all: free-flow car, where the worst-served
+quarter still reaches on average 98.5% of what the median resident
+reaches (`low_spread`, threshold 0.95) - a relative rule would
+otherwise flag a tenth of residents for nothing. The guard compares
+the MEAN of the worst-served quarter, not its upper edge: when a
+quarter of residents share the median value, the edge equals the
+median whatever lies below it (D-064).
+**The list depends on the population weighting** (both halves of the
+rule use residents). Transit 45 min at r8: 24 hexes / 145,841 residents
+(9.6%; Alatau 103,968) on the raster, 33 hexes / 164,802 (10.8%)
+calibrated; 21 hexes are deserts under both, and the top-ranked hex
+differs. Both lists are in `equity_deserts.parquet`; the notebook maps
+the common core separately. And these are mostly not transit findings:
+only 1 of the 24 has a modelled route while 19 contain mapped stop POIs
+(calibrated: 1 of 33, and 24), so their "transit" access is a walking
+value (D-063).
+
+### D-056: LISA with PySAL - and tie-aware p-values, because the library's break
+Engine: esda 2.10 / libpysal 4.15 (the PySAL the README names; joined
+in its phase per the Phase 0 dependency policy; numba is NOT needed -
+LISA over the 3,329 r9 hexes takes 1.3 s at 999 permutations and 3.8 s
+at 9,999, over the 712 r8 hexes 0.3 s and 0.9 s). Weights: H3 ring-1
+neighbours that are also inhabited, row-standardized; a hex with no
+inhabited neighbour is an island and can never cluster. Global Moran's
+I is 0.84-0.99 for the job measures - by construction (neighbours
+share most of what they can reach) - so only the LOCAL statistic
+informs.
+Fewer than 20 inhabited hexes -> LISA skipped with a recorded reason
+(the 3-hex sample at r8; the sample's r9 exercises the full path).
+
+**P-values are computed here, from esda's own seeded conditional
+permutations, because every variant esda offers fails on this data** -
+accessibility measures are zero-inflated (67% of inhabited r9 hexes
+have a kindergarten 2SFCA of zero), and zeros tie:
+- esda's recommended `alternative="two-sided"` mirrors the observed
+  percentile into the opposite tail and counts everything beyond it;
+  the mass of tied all-zero neighbourhoods lands inside that count.
+  Observed on kindergartens: no p-value below 0.084 at 999 permutations
+  (0.090 at 9,999), hence not one significant cell for a variable whose
+  global I is 0.77.
+- esda's one-sided tails compare floats with `>=`. The observed
+  statistic of a zero hex among zero neighbours and the permutations
+  that tie with it differ in the last bits, so the ties go uncounted:
+  a zero hex with two zero neighbours gets p = 0.001 at 999
+  permutations although a third of them tie with it (tie-inclusive
+  one-sided tail 0.33). Observed on schools: 1,446 zero-region "cold
+  spots".
+- esda's third option, `folded`, falls into neither trap, but it folds
+  the reference distribution about its mean - and that distribution is
+  skewed, so one tail becomes unreachable: 397 walking hot spots and
+  not one cold spot (999 permutations).
+`tie_aware_p` counts both tails with a float tolerance and doubles the
+smaller one (the textbook conservative two-sided permutation p-value).
+On the tie-free walk measure it agrees with esda's two-sided result to
+within a few hexes (340 HH / 781 LL vs 343 / 800 at 999 permutations;
+341 / 803 vs 341 / 809 at 9,999); on zero-inflated measures it finds
+provision hot spots and - correctly - no cold spots: a zero among zeros
+is not surprising when most hexes are zero. A regression test plants
+both traps. The project's own Phase 2 Moran's I and esda's agree to 4
+decimals on the same weights.
+
+Multiple testing: one test per hex. The report carries the count that
+survives Benjamini-Hochberg control at the same alpha, split into hot
+and cold. That needs p-value resolution: the smallest two-sided p is
+2/(permutations+1), and BH over m tests admits floor-level cells only
+when at least ceil(floor * m / alpha) of them exist - 133 at 999
+permutations over the 3,324 r9 tests, 14 at the city's 9,999 (sample:
+999). Where even that is not met and nothing passes, the count is
+reported as NULL ("unresolved"), not as zero: schools (8 floor-level
+cells on the raster, 3 calibrated) and clinics (4) at r9.
+
+**Cluster counts are Monte Carlo estimates.** A pseudo p-value doubles
+a tail share counted over a finite number of permutations; at 9,999
+its standard error near 0.05 is about 0.003. The report therefore
+carries, per measure, the hexes within two standard errors of alpha
+(`borderline`): significant ones another seed could drop, and
+non-significant ones it could add. A one-off check with four seeds at
+9,999 permutations (a scratch measurement, not a pipeline output) shows
+what the field means:
+
+| measure | HH / LL in the report | borderline | HH across 4 seeds | LL across 4 seeds |
+|---|---|---|---|---|
+| transit 45, r8 | 78 / 157 | -9 / +4 | 78 in every run | 154-159 |
+| walk 30, r9 | 341 / 803 | -36 / +29 | 335-345 | 784-803 |
+| schools 2SFCA | 168 / 0 | -20 / +23 | 162-183 | 0 |
+| kindergartens 2SFCA | 240 / 0 | -15 / +9 | 230-240 | 0 |
+| clinics 2SFCA | 219 / 0 | -122 / +61 | 219-279 | 0 |
+
+Job measures are stable to a few percent. The zero-heavy 2SFCA
+measures are not, because their reference distribution is lumpy.
+Clinic 2SFCA is 62% zeros plus 13 extreme hexes (above 10 per 1,000
+residents, up to 35: a facility next to almost no residents), and a
+shuffled neighbourhood beats an ordinary hot one essentially only when
+it draws one of those 13 - about 2.4% of shuffles. Every hex whose
+neighbour mean lies between 1.4 and 1.9 therefore gets the SAME
+p-value (56 hexes at exactly p = 0.0486), and such blocks cross the
+0.05 line together. Read those counts as rough, and the FDR-surviving
+ones as the firmer part (kindergartens: 100 in the report, 80-100
+across the four seeds).
+
+Results (r8, transit 45 min): I = 0.90; 78 HH and 157 LL hexes, of
+which 134 survive FDR (63 hot, 71 cold; 125-151 across the four
+seeds). The cold spots lie in outer Alatau, Nauryzbay, the Medeu
+foothills and north-east Turksib. For job measures the cluster
+LOCATIONS do not depend on the population weighting (the statistic is
+computed on hex values, which contain no residents - a test compares
+the two per-hex files label by label); the resident shares do: cold
+spots hold 2.1% of residents on the raster and 1.9% calibrated (0.8%
+and 0.7% in FDR-surviving cold spots), the central hot spot 24% and
+34%. Large in area, thin in people. 2SFCA values DO depend on the
+weighting (D-058), and so do its hot spots: schools 168 raster / 130
+calibrated with 93 in common, kindergartens 240 / 182 (149), clinics
+219 / 231 (170). Those differences are of the same order as the
+seed-to-seed variation above: that the hot spots move is established
+(the values changed), by how many hexes is not.
+
+### D-057: Mode gap = transit / car, a lower bound over an upper bound
+`modegap_transit_car_T` divides jobs reachable by approximate transit
+(a lower bound, D-044) by jobs reachable by free-flow car (an upper
+bound, D-046) within the same T minutes; NaN where the car reaches
+nothing. The level therefore OVERSTATES car dependence everywhere and
+is reported as a ranking, not a finding: median ratio 0.037 at 45 min
+(0.048 calibrated), 87% (82%) of residents below 0.25 ("the car reaches
+over four times as many"). At 15 minutes the modelled transit adds
+nothing over walking for any resident, so that column is a walk/car
+ratio - the report says so per threshold
+(`pop_share_transit_equals_walk`).
+
+### D-058: The population raster is skewed between districts - so everything runs twice
+Found while sanity-checking district tables: the r8 hexes assigned to
+Auezov hold 80,380 raster residents, fewer than Almaly's. Against the
+one residence-based official series already in the pipeline (employed
+residents per district, Taldau labour-force survey, 2025) the raster's
+district shares are far off. On the r9 grid, which follows district
+borders more closely, official share / raster share is: Auezov 2.37,
+Almaly 1.66, Nauryzbay 1.41, Bostandyk 1.08, Alatau 0.81, Medeu 0.73,
+Zhetysu 0.73, Turksib 0.66 - the raster gives Auezov 0.42x and Turksib
+1.51x their share. (On r8, where whole hexes are assigned to one
+district, the Auezov factor is 2.78; about a seventh of that is the
+coarse assignment, not the raster.) The raster shortchanges the dense
+high-rise districts, which are the best served, and overweights the
+low-rise periphery, so every population-weighted inequality figure is
+biased upward. Employed residents are not total population, but
+employment rates do not differ twofold between districts.
+
+Phase 5 does not rewrite the population layer - that would change the
+outputs of Phases 2-4 and is the owner's decision. It runs the WHOLE
+analysis under two weightings instead: `raster`, and `calibrated` (hex
+residents rescaled so district totals follow the official shares; city
+total and within-district pattern unchanged). Every population-weighted
+output exists for both, in the same shape: long tables carry a
+`weights` column, there is one per-hex file per weighting, and the
+report has one result block per weighting plus a `comparison`.
+A measure that CONTAINS residents is recomputed, not merely
+re-weighted: 2SFCA uses them as the demand competing for each facility,
+so the calibrated run rebuilds it from the Phase 4 walk matrix (the
+same code must first reproduce the stored raster values, or the build
+stops). Re-weighting alone had produced "calibrated" means 21-29% above
+the raw ones - impossible for a supply-conserving measure.
+What moves (transit 45 min, r8): residents below 5% of city jobs 61.6%
+-> 51.5%; Gini 0.62 -> 0.59; desert list 24 -> 33 hexes with 21 in
+common. What moves for 2SFCA (r9): means unchanged, as they must be;
+Gini 0.65 -> 0.61 (schools), 0.73 -> 0.69 (kindergartens), 0.73 -> 0.68
+(clinics); Auezov's district rank falls from 1st to 5th for schools and
+2nd to 4th for clinics - its raster "provision hot spot" was the
+undercount of its residents, not provision. What does not move: LISA
+cluster locations of job measures, and within-district means of job
+measures (calibration rescales whole districts).
+The report QUOTES the statistics file's `source` wherever it describes
+the calibration and never certifies it: whether a hand-collected file
+is official is its owner's statement, not the code's. The one status
+the project can vouch for is its own - the committed sample's district
+numbers are labelled SYNTHETIC everywhere. With no residence series at
+all the calibrated run is skipped with a recorded reason, and
+calibrated per-hex files left over from an earlier run are deleted
+rather than left beside a report that says "skipped".
+**Open question for the owner - this reaches back into earlier phases:**
+`pop_residents` is a Phase 2 feature (the Phase 3 forest sees it), the
+2SFCA demand term (Phase 4) and the denominator of the Phase 3
+plausibility ratios (Almaly's "2.17 jobs per resident" is inflated by
+the undercount). The clean fix is to calibrate the raster to official
+district POPULATION totals at the source (an extra Taldau indicator in
+`download stats`, then a pycnophylactic rescale in `prepare
+population`) and re-run Phases 2-5. Not done unasked.
+
+### D-059: The one-sentence result, and the D-044 question left open
+README's done-when asks for one sentence with numbers. Built from the
+first analysis-resolution headline measure and the configured cutoff
+(5% of city jobs; all cutoffs 1/5/10/25% are in the report), on both
+weightings: **"Between 51% and 62% of residents - depending on how
+the population raster is calibrated - can reach fewer than 5% of city
+jobs within 45 min by transit (approximate network, a lower bound),
+concentrated in Alatau and Turksib."** The range is chosen on what
+PRINTS (two shares that round to the same percent give one number).
+"Concentrated in" names only districts among the three with the most
+affected residents under BOTH weightings: third place swaps (Medeu on
+the raster, Nauryzbay calibrated), and a sentence hedged on its
+percentage must not be falsely firm about its places. The report also
+gives each district's own rate (Nauryzbay 99%, Turksib 99%, Alatau 91%
+of residents below the cutoff), which no weighting changes. Absolute
+head-counts stay out of the sentence: the raster's city total is itself
+an undercount.
+The D-044 question (synthesize stops along ways-only routes vs keep
+the lower bound) was never answered, so the documented default stands:
+transit remains the labelled lower bound and the sentence says so in
+its own words. The report makes the size of that gap visible (D-063):
+on WALKING alone the same share is 65.4% on the raster and 54.5%
+calibrated, so the modelled transit moves the headline by three to
+four points. It is paired with
+walk-based companion sentences that do not touch the transit layer
+(59-65% of residents within a 15-minute walk of a clinic, 61-65% of a
+school, 48-55% of a kindergarten, 22% of a park of at least 1 ha).
+
+### D-060: Socio-economic proxy - distance to the centre only
+README's optional item ("housing type or distance to the center, if
+open data exists"). Distance to the historic centre exists (Phase 2)
+and gives a clean gradient: on the raster, mean % of city jobs within
+45 min by transit falls 26.8 -> 15.2 -> 10.3 -> 4.7 -> 2.7 -> 0.4
+across the bands 0-2.5 / 2.5-5 / 5-7.5 / 7.5-10 / 10-15 / >15 km, while
+free-flow car stays between 97.9 and 91.8 (the calibrated run gives the
+same shape; both are in the report). Spearman rho with distance, which
+is computed on hexes and has no weighting: -0.68 (transit), -0.62
+(walk), -0.78 (bike), -0.75 (car). Housing type is NOT attempted: it
+would need real floor counts and 97.1% of the building layer's floors
+are config defaults (D-042) - any high-rise / low-rise split would be
+an artifact of those defaults.
+
+### D-061: Bivariate classes; one chart system for the notebook
+The 3x3 classes cross population terciles across HEXES with access
+terciles across RESIDENTS - the same reasoning as the desert rule: with
+hex terciles on the access axis the "many people, little access" class
+was nearly empty and shared no hex with the desert layer. Terciles are
+cut on VALUES, so hexes with identical values always share a class (a
+rank-based split would scatter equal zeros across classes arbitrarily);
+class sizes are unequal by design. The classes are drawn on the raster.
+Notebook 05 follows one small chart system: form chosen by the data's
+job, one hue for magnitude, blue <-> red for cold/hot polarity with a
+neutral grey, distinct hues only where the four modes share an axis
+(fixed order, direct labels, table printed under every chart).
+Palettes were checked with a colour-vision-deficiency validator
+rather than by eye: the four mode hues pass as an adjacent palette
+(worst CVD delta-E 9.1), the LISA poles pass all-pairs (21.6), and the
+3x3 scheme (Stevens' pink-blue) is lightness-monotone along both axes
+with its three saturated corners separated all-pairs (13.4). Looking
+at the rendered figures - not the checks - caught six layout defects
+(a super-title over two panel titles, district names lost under dark
+fills, three stacked annotations, a legend on a data line, a seam in
+the bars, two titles asserting findings that are false on the sample).
+
+### D-062: One sample pipeline run per test session
+The model, access and equity test modules each ran the whole sample
+pipeline. They now share one session-scoped run (`sample_pipeline` in
+conftest). Its directories are read-only for tests: anything that
+forces a rebuild or expects a failure works on a private copy
+(`scratch` fixture), as the no-transit fixture always did.
+
+### D-063: Phase 5 adversarial review round - 3 confirmed majors fixed
+Same 4-lens + adversarial-verifier setup as D-034 / D-043 / D-052; 11
+agents, every major reproduced independently before counting. 3
+confirmed, 0 refuted, 4 downgraded-but-real, about 18 distinct minors.
+- **The sensitivity run was half done and the docs said otherwise.**
+  The first version re-weighted only the headline statistics, while
+  D-058 claimed "the desert hex list does not depend on these weights"
+  and the report caveat said population-weighted figures were given on
+  both weightings. Neither was true: the desert rule uses residents
+  twice (12 of the 33 calibrated transit deserts were missing from the
+  shipped list, the top hex was in another district), and LISA resident
+  shares, the mode gap and the centre gradient were raster-only.
+  Fixed structurally rather than by rewording: every population-
+  weighted output now exists under both weightings (D-058).
+- **"Calibrated" 2SFCA was neither raw nor calibrated.** Residents are
+  its demand term; swapping only the weight moved its mean by 21-29%,
+  which a supply-conserving measure cannot do. It is now recomputed
+  with calibrated demand, behind a guard that the same code reproduces
+  the stored raster values. Consequence worth remembering: Auezov's
+  top rank for school provision was the raster's undercount of Auezov.
+- (The third confirmed major was the same desert-list claim, found
+  independently by a second lens.)
+Downgraded but fixed: the one-sentence result had no real test (the
+sample gives 0%) - `_headline`, `_share_text` and `_companions` are now
+unit-tested on a hand-built multi-district world, and the report test
+cross-checks the share against two other code paths; per-hex layers
+were attached positionally with nothing tying them to their h3 - they
+are merged by h3 now, and tests recompute bivariate classes in a
+shuffled order and check every significant LISA label against the
+quadrant of the hex's own and its neighbours' values; the calibrated
+path was asserted only where it is a no-op - it is now recomputed
+independently at r9, where two districts make it bite.
+**Transit coverage made measurable** (downgraded, but it changes how
+the transit results read): the modelled transit adds nothing over
+walking for 100% / 83% / 50% / 27% of residents at 15 / 30 / 45 / 60
+min (100 / 80 / 43 / 23% with calibrated residents); 29% (35%) of
+residents live in a hex with a modelled route, 52% (50%) in a hex with
+mapped stop POIs but none. Transit district ranks and transit
+deserts therefore partly measure where OSM relations lack stop members;
+the report carries these figures (`transit_coverage`) and the walk-only
+twin of the headline.
+Minors fixed: literal desert count used `<` against the adopted `<=`
+(for 2SFCA the 0-vs-hundreds contrast was purely the operator); "empty
+by construction" overclaimed (it holds for the headline measures, not
+in general); a relative desert rule flagged 161k residents as car
+"deserts" at 96-97% access (low-spread guard); FDR = 0 reported where
+9,999 permutations cannot resolve it (now null with the floor counts);
+the quoted raster skew mixed in r8 hex-assignment error (docs now quote
+the r9 factors); synthetic sample statistics were labelled official
+Taldau figures; `top_districts` mixed weightings without labels; NaN
+could leak into the report JSON (now sanitized and written with
+allow_nan=False; an infinite Palma is the string "inf"); a range could
+print two identical ends; `weighted_quantile` skipped a value when a
+cumulative weight hit the target only up to rounding; r8 2SFCA rows
+shipped in the summary although declared unusable; "most routes lack
+mapped stops" re-used the country-wide ratio the Phase 4 review had
+already scoped; D-056 attributed the total FDR count to the cold spots;
+12 r9 hexes hold nearly all residents of their r8 parent although the
+siblings are built up (8,193 residents on 133 m2 of tagged residential
+floor area) and top the fine-resolution rankings - flagged
+`point_mass`, and a Phase 1 follow-up for the owner (fall back to total
+floor area where residential tags are missing).
+One process lesson: `pre-commit run --all-files` only sees files git
+already tracks. New files are invisible to it until staged - which is
+what really let the Phase 4 commit fail on hooks that had "passed".
+
+### D-064: Phase 5 re-review round - one notebook claim, and tests that could not fail
+A focused second review of the two-weightings rewrite (same adversarial
+verification as D-063): 0 majors in the rewritten code, 1 confirmed
+major in the notebook, 11 minors. All fixed.
+- **The notebook repeated the mistake D-063 had just fixed.** Its LISA
+  text said cluster locations do not depend on the weighting. True for
+  job measures, false for the three 2SFCA measures (their values are
+  recomputed) - and its table printed raster cluster counts next to
+  calibrated resident shares. The text now separates the two cases,
+  the table prints the counts under both weightings with their
+  overlap, and the claim is tested in both directions: labels and
+  p-values must be identical in the two per-hex files for job measures,
+  and the report's overlap counts must be what the files contain.
+- **Tests that could not fail.** The quantile-tolerance example did not
+  need the tolerance; the headline test's three districts could never
+  drop one from "concentrated in"; the calibrated 2SFCA was checked
+  only for supply conservation, which dividing the raster values by
+  the district factor satisfies as well. Each was replaced by a
+  discriminating case (five weights of 0.3 at q = 0.2; a four-district
+  world where two districts swap in and out of the top three; an
+  independent groupby recomputation from the walk matrix, the POI
+  layer and the calibrated residents). The new tests were then
+  mutation-checked: 12 deliberate breaks of the source, one per
+  documented behaviour, each caught by its test - and the division
+  shortcut was confirmed to pass the old conservation test.
+- **Claims the code made without measuring.** The low-spread guard
+  compared the upper EDGE of the worst-served quarter with the median
+  (equal whenever a quarter of residents share the median value,
+  whatever lies below) - it now compares the quarter's mean. The
+  report certified statistics as "official" from a source string - it
+  now quotes the source and labels only the project's own synthetic
+  sample. Two caveats asserted facts instead of reading them: "2SFCA
+  is zero-inflated" appeared on the sample, where no inhabited hex has
+  a 2SFCA of zero, and the transit-coverage sentence quoted the raster
+  alone. Caveats are generated from the data now, under both
+  weightings.
+- Smaller: the headline paired raster values with calibrated weights
+  (harmless for a job measure, wrong for any measure that contains
+  residents); calibrated per-hex files survived next to a report
+  saying the calibration was skipped; a statistics file without the
+  optional `source` column crashed; the FDR "unresolved" branch had no
+  unit test; the notebook's weights chart drew the r8 shares while the
+  docs quote r9.
+- Corrected figures in this log, each re-measured: the LISA timing in
+  D-056 (0.3 s was the 712-hex figure, not the 3,329-hex one), 1,440
+  -> 1,446 zero-region "cold spots", the permutation count behind 0.084
+  and 0.001, the `folded` option, and both weightings wherever one was
+  quoted alone (D-055, D-059, D-063).
+- **Found while re-measuring, not by the review:** the count of
+  nominally significant LISA hexes moves with the seed - a little for
+  job measures, by a quarter for clinics (table in D-056). The report
+  now states how many hexes sit within Monte Carlo error of alpha
+  (`borderline`) instead of presenting one seeded count as the answer.
+Process lesson: a review finding is a claim too. Every figure the
+re-review handed over was re-measured before it was written down (all
+held); one figure already in this log did not survive the same check.

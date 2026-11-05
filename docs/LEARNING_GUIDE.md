@@ -844,3 +844,386 @@ pairs unwalkable, useless for checking the walk mode), and the r8
 granularity caveat where `near_school 12 min` and `0 schools in 15
 min` coexist honestly because one measures to the point and the other
 to its hex centroid.
+
+# Phase 5 - Equity and spatial statistics
+
+## From "how much" to "who" and "where"
+
+Phase 4 gave every hex an accessibility number. Equity analysis changes
+the unit: the question is about PEOPLE. So every statistic here weights
+a hex by its residents - a hex of 5,000 people counts 5,000 times - and
+only inhabited city hexes take part. An empty mountain cell with zero
+access is geography, not injustice.
+
+## Lorenz curve, Gini, Palma - three views of one sorted line
+
+Line up all residents from the worst served to the best served. Walk
+along the line and keep two running totals: the share of PEOPLE passed
+so far, and the share of ALL ACCESSIBILITY they hold. Plot one against
+the other: that is the Lorenz curve.
+
+- If everyone had the same access, the first 30% of people would hold
+  30% of the access: the curve is the diagonal.
+- The more it sags below the diagonal, the more unequal.
+
+**Gini** = twice the area between the curve and the diagonal. 0 means
+perfect equality; values near 1 mean a few people hold nearly
+everything. In formula form, with vertices (P_k, L_k):
+
+    G = 1 - sum_k (P_k - P_{k-1}) * (L_k + L_{k-1})
+
+Because everyone inside a hex shares one value, the curve is a chain of
+straight segments - one per hex - and this sum is EXACT, not a
+numerical approximation.
+
+**Palma** ignores the middle and compares the tails: the access held by
+the best-served 10% of residents divided by the access held by the
+worst-served 40%. Under perfect equality it is 10/40 = 0.25. It answers
+a question Gini blurs: how far apart are the extremes?
+
+What Almaty looks like (r8, % of city jobs reachable; Gini on the
+population raster, then on calibrated residents - see "The weights"
+below):
+
+| mode | Gini | Palma |
+|---|---|---|
+| car, 45 min (free-flow) | 0.005 / 0.004 | 0.25 |
+| bike, 45 min | 0.25 / 0.23 | 0.76 |
+| transit, 45 min (approximate) | 0.62 / 0.59 | 8.0 |
+| walk, 30 min | 0.63 / 0.60 | 8.7 |
+
+Read the table as a sentence: with a car (and no congestion) where you
+live barely matters; on foot or by transit it decides almost
+everything.
+
+## The desert rule - and why the literal version found (almost) nothing
+
+README: a desert is a hex with population above the 75th percentile and
+accessibility below the 25th. Taken literally - both percentiles across
+hexes - it flagged 0, 0, 0 and 1 of 712 hexes for the four r8 headline
+measures. Not because the city is fair: because the two extremes rarely
+meet. The "low access" threshold across hexes is set by hundreds of
+near-empty outskirt cells, far below anything a dense hex experiences.
+
+The fix is to ask the question about people on the access side: a
+desert is a dense hex (population above the hex 75th percentile) whose
+access is at or below the level under which the WORST-SERVED QUARTER OF
+RESIDENTS live (the population-weighted 25th percentile). For transit
+that finds 24 hexes with 146 thousand residents on the raster - 104
+thousand of them in Alatau's microdistricts. The literal rule's count
+is still printed next to every result, so nobody has to take the
+reinterpretation on trust.
+
+Two guards came out of the review and are worth knowing:
+
+- **A relative rule always finds a "worst quarter".** Free-flow car
+  access sits between 96% and 98%; the rule dutifully flagged 161 thousand
+  residents as car "deserts". Now a measure whose worst-served quarter
+  still reaches, ON AVERAGE, 95% of what the median resident reaches
+  reports no deserts at all (car: 98.5%). The average matters: the
+  first version compared the quarter's upper EDGE with the median, and
+  when a quarter of residents share the median value that edge IS the
+  median - however bad the tail below it.
+- **Both halves of the rule use residents**, so the list changes with
+  the population weights: 24 hexes on the raster, 33 calibrated, 21 in
+  common. The notebook maps that common core separately.
+
+## Moran's I and LISA - "clustered" is not the finding
+
+**Global Moran's I** measures whether similar values sit next to each
+other (+1 clustered, 0 random, -1 checkerboard). For accessibility it
+comes out around 0.9 - and that is NOT a discovery. Two neighbouring
+hexes can reach almost the same set of destinations, so their values
+are similar by construction. Reporting "I = 0.9, p < 0.001" as a result
+would be reporting arithmetic.
+
+The informative tool is local. **LISA** (local Moran, Anselin 1995)
+gives every hex its own statistic:
+
+    I_i = z_i * (mean of z over the neighbours of i)
+
+where z is the standardized value. Both high -> HH, a hot spot. Both
+low -> LL, a cold spot. Opposite signs -> an outlier (HL, LH).
+Significance comes from **conditional permutation**: keep hex i fixed,
+deal its neighbours random values from the rest of the city a few
+thousand times, and ask how often the shuffled I_i is as extreme as the
+real one.
+
+Result: the transit hot spot is the central core (24% of residents on
+the raster, 34% calibrated); the cold spots are outer Alatau,
+Nauryzbay, the Medeu foothills and north-east Turksib - large on the
+map but only about 2% of residents. That contrast is itself a finding:
+the worst clusters are thin in people, and MOST underserved residents
+(the 51-62% below 5% of jobs) do not live in a statistical cold spot at
+all - they live in ordinary, moderately bad places. Cold-spot maps
+alone would miss them.
+
+### The tie trap (worth telling in an interview)
+
+Many accessibility measures are zero-inflated: 67% of inhabited r9
+hexes cannot reach any kindergarten within the 15-minute catchment. A
+zero hex with zero neighbours then TIES with every shuffle that also
+deals it all zeros - and both p-values the library offers mishandle
+ties, in opposite directions:
+
+- its recommended two-sided p-value mirrors the observed percentile to
+  the other tail and counts everything beyond it; the tie mass lands
+  inside the count. For kindergartens no p-value came out below 0.084
+  with 999 shuffles (0.090 with 9,999) - not one significant cell for a
+  variable with global I = 0.77;
+- its one-sided p-values compare floating-point numbers with >=; the
+  observed value and its tied shuffles differ in the 16th digit, the
+  ties are NOT counted, and a zero hex with two zero neighbours gets
+  p = 0.001 (999 shuffles) although a third of the shuffles tie with
+  it - the tie-inclusive tail is 0.33. For schools that made 1,446
+  zero-region "significant cold spots";
+- a third option avoids both traps but folds a skewed distribution
+  about its mean, so it can only ever see one tail: 397 walking hot
+  spots and not a single cold spot.
+
+The project computes the p-value itself from the library's own
+shuffles: count both tails with a float tolerance, double the smaller.
+On tie-free data it matches the library within a few hexes; on
+zero-inflated data it finds real provision hot spots and no fake cold
+spots. *Lesson: a p-value is a counting rule. Know what yours counts
+when values tie - and if your data has many zeros, they will.*
+
+### One test per hex is thousands of tests
+
+At alpha = 0.05, 3,000 tests produce ~150 "significant" hexes from pure
+noise. **Benjamini-Hochberg** control keeps the expected share of false
+discoveries below alpha: sort the p-values, find the largest k with
+p_(k) <= k/m * alpha, keep those k. The report gives both counts (for
+transit: 157 cold-spot and 78 hot-spot hexes at p < 0.05, of which 134
+survive FDR).
+
+A practical catch: permutations set a floor under the p-value. With 999
+of them the smallest two-sided p is 0.002, and BH over ~3,300 tests
+needs 133 simultaneous floor-level results before it admits one - so
+the city run uses 9,999 (floor 0.0002, 14 needed). Where even that is
+not enough the report says "unresolved" (null), not zero: "no cluster
+survives" and "this run cannot tell" are different statements.
+
+### A p-value from shuffles is itself a measurement
+
+The pseudo p-value is a share counted over a finite number of shuffles,
+so it has sampling error like any other share. The two-sided value
+doubles a tail share t, counted over N shuffles:
+
+    SE(p) = 2 * sqrt(t * (1 - t) / (N + 1)),   t = alpha / 2
+
+At alpha = 0.05 that is about 0.010 with 999 shuffles and 0.003 with
+9,999. A hex whose p-value sits within two standard errors of 0.05
+(0.044 to 0.056 for the city run) is a coin toss: another random seed
+can move it across the line. The report counts those hexes per measure
+(`borderline`), and a one-off check with four seeds shows it matters:
+
+| measure | hot spots in the report | across four seeds |
+|---|---|---|
+| transit 45 min (r8) | 78 | 78 every time |
+| walk 30 min (r9) | 341 | 335-345 |
+| schools 2SFCA | 168 | 162-183 |
+| kindergartens 2SFCA | 240 | 230-240 |
+| clinics 2SFCA | 219 | 219-279 |
+
+Smooth measures are stable. Zero-heavy ones are not, and the reason is
+worth understanding. Clinic 2SFCA is 62% zeros plus 13 extreme hexes
+(a clinic next to almost no residents scores up to 35 per 1,000). A
+shuffled neighbourhood beats an ordinary hot one almost only when it
+happens to draw one of those 13 - about 2.4% of shuffles - so EVERY
+hex with a neighbour mean between 1.4 and 1.9 gets the same p-value:
+56 hexes at exactly p = 0.0486. Blocks like that cross the 0.05 line
+together. *Lesson: a seed makes a result reproducible, not stable.
+Before quoting "219 hot spots", ask how many of them a different seed
+would keep - and report that number next to the count.*
+
+## How much of "transit" is transit?
+
+The transit network is a lower bound: only routes whose OSM relation
+lists ordered stops could be modelled. Phase 5 turns that label into a
+number. For 100% / 83% / 50% / 27% of residents (at 15 / 30 / 45 / 60
+minutes; 100 / 80 / 43 / 23% with calibrated residents) the modelled
+transit adds NOTHING over walking; 29% of residents (35% calibrated)
+live in a hex with a modelled route, while 52% (50%) live in a hex
+that has mapped stops but no modelled route. Run the headline on
+walking alone and you get 65% instead of 62% (calibrated: 54.5%
+instead of 51.5%).
+
+So a "transit desert" here is usually a walking value in a place where
+the mapping is thin (1 of the 24 transit desert hexes has a modelled
+route; 19 contain mapped stops), and the transit ranking of districts
+partly ranks OSM completeness. *Lesson: a caveat a reader can skip is
+not a caveat. Put a number on the gap and print it next to the result.*
+
+The same thinking applies to the **mode gap** (transit / car job
+access): it divides a lower bound by an upper bound (free-flow car), so
+its level ("87% of residents car-dependent", 82% calibrated) is biased
+everywhere - its
+map, where the ratio is highest, is the usable part. Always ask which
+direction each ingredient of a ratio is biased before you quote it.
+
+## The weights were the biggest surprise
+
+Every number above is weighted by residents, and the residents come
+from a population raster - a model. While reading the district table,
+one line looked wrong: Auezov with fewer residents than Almaly. The
+pipeline already held an official residence-based series (employed
+residents per district, from the labour-force survey), so the check
+took five minutes: the raster gives Auezov 0.42x and Almaly 0.60x their
+official share, and the low-rise periphery up to 1.51x. Dense high-rise
+districts are undercounted - and they are the best-served ones, so the
+skew inflates every inequality number.
+
+The response:
+
+1. **Do not hide it**: it is a caveat in the report, with the numbers.
+2. **Do not patch one number**: run the WHOLE analysis under two
+   weightings - the raster, and residents rescaled so district totals
+   follow the official shares. Same tables, same shapes, a `weights`
+   column. The first attempt re-weighted only the headline; the review
+   showed the desert list, the cluster shares and the gradient moved
+   just as much while the docs claimed they did not.
+3. **Find the weight hiding inside a measure.** 2SFCA divides
+   facilities by the residents competing for them. Re-weighting its
+   OUTPUT with calibrated residents gave means 21-29% higher - which is
+   impossible, because 2SFCA conserves supply: its resident-weighted
+   mean is simply facilities per resident. The measure has to be
+   recomputed with calibrated demand. Then the mean stays put, and the
+   real effect appears: Auezov falls from 1st to 5th of the districts
+   for school provision. Its "provision hot spot" was the undercount of
+   its own residents.
+4. **Report the range**, not the convenient end of it: 62% on the
+   raster, 51% calibrated.
+
+What it did NOT do is silently replace the population layer - that
+would change features, the job model and 2SFCA in three earlier
+phases. Cross-phase changes are decisions, not fixes.
+
+*Lessons: weights are data too - validate them against anything
+official you can find. And when you test sensitivity to an input, trace
+every place the input enters, including inside your measures.*
+
+## Interview Q&A
+
+**Q: Your Gini for car access is 0.005. Does that mean Almaty is fair?**
+It means free-flow driving time barely varies inside a 30 km city, so a
+model without congestion or car ownership sees everyone reaching ~97%
+of jobs. It is a reference mode. The equity story is in the gap between
+that line and the walk/transit lines.
+
+**Q: Why not just map the bottom 25% of hexes as "deserts"?**
+Because most of those hexes are empty. Hex-level percentiles answer a
+question about land; equity needs percentiles of people. The literal
+hex rule flagged at most one hex out of 712 - the person-weighted one
+found 146 thousand residents.
+
+**Q: You report "between 51% and 62%". Isn't a range a weakness?**
+A single number would be false precision: the population raster is
+demonstrably skewed between districts, and the two ends are the raw
+raster and the one calibrated to district statistics. Knowing which
+input moves the answer, and by how much, is the result.
+
+**Q: How do you know your LISA clusters are not artifacts?**
+Four guards: seeded conditional permutations (reproducible), tie-aware
+p-values (the library's own break on zero-inflated data, in both
+directions), FDR counts for multiple testing, and a count of the hexes
+within Monte Carlo error of the 0.05 line - because a seed makes the
+clusters reproducible, not stable (clinic hot spots range from 219 to
+279 across four seeds; transit ones are 78 every time). Plus tests that
+plant a hot and a cold blob on real H3 cells and require the method to
+find them - and that check every significant label against the hex's
+own value and its neighbours', so a label can never sit on the wrong
+hex.
+
+**Q: Is your transit result about transit?**
+Partly. For 43-50% of residents (depending on the population weights)
+the modelled network adds nothing over walking within 45 minutes, and
+the report says so with numbers. The
+honest reading is: "even with the transit we could model, X; on walking
+alone, Y" - and the gap between a lower-bound network and reality is
+the first thing better data would close.
+
+## What went wrong before it went right (Phase 5 edition)
+
+- **A rule that returned nothing.** The README's desert definition
+  flagged at most one hex in 712. An empty result is a result to investigate,
+  not to ship.
+- **A statistic that could not be significant - and its twin that
+  always was.** One library option left kindergartens without a single
+  cluster; another turned 1,446 zero cells into school "cold spots".
+  Neither was about the city.
+- **Service measures at the wrong resolution.** 2SFCA at r8 had an
+  infinite Palma ratio. Headline measures are now listed per
+  resolution, each where it means something.
+- **A district table that failed the smell test** - and led to the
+  population-raster finding, the most consequential caveat of the
+  phase.
+
+## What the Phase 5 adversarial review caught
+
+Three confirmed majors and a long tail, all in one family: the
+sensitivity analysis I was proud of was only half built.
+
+- **A robustness claim nobody had tested.** DECISIONS said the desert
+  list "does not depend on these weights". It does - the rule uses
+  residents twice - and a third of the calibrated list was missing from
+  the shipped one. *Lesson: "X does not depend on Y" is a claim. Write
+  the test that would fail if it were false, or do not write the
+  sentence.*
+- **A measure that was neither raw nor calibrated.** The half-calibrated
+  2SFCA (see above). *Lesson: a number that cannot happen (a mean that
+  moves when nothing was added) is the cheapest bug detector there is -
+  know your measure's conservation law.*
+- **Zero is not "unresolved".** FDR reported 0 survivors where the
+  permutation count could not have produced any. The report now
+  distinguishes the two.
+- **The sample lied by label.** The committed sample ships synthetic
+  district statistics, and the report called the weights derived from
+  them "official Taldau figures". Now the source travels with the
+  number.
+- **A point mass in the data.** Twelve fine hexes hold nearly all
+  residents of their coarse parent - 8,193 people on 133 m2 of tagged
+  residential floor area - because the population split follows
+  residential TAGS and private-house areas rarely carry them. They top
+  every ranking by residents; they are flagged now, and the upstream
+  fix is on the owner's list.
+- **And a process lesson**: `pre-commit run --all-files` only sees
+  files git already tracks. New files are invisible to it until staged.
+  That - not a display glitch - is why "all hooks passed" and the
+  commit still failed in Phase 4. Stage first, then run the hooks.
+
+## The second review round - tests that could not fail
+
+After the rewrite, a second, narrower review found no major problem in
+the code - and one in the notebook, which still said "cluster locations
+do not depend on the weighting". That is true for job measures and
+false for 2SFCA, whose values are recomputed: the very distinction the
+first round had been about. The rest were small, but they share a
+theme worth remembering.
+
+- **A test that cannot fail is documentation, not a test.** Three of
+  mine could not: the float-tolerance example gave the right answer
+  without the tolerance; the "name only stable districts" test had
+  three districts, so its top-three intersection could never drop one;
+  and the calibrated 2SFCA was checked only for supply conservation -
+  which a lazy shortcut (divide the raster values by the district
+  factor) also satisfies. The fix has a name: **mutation testing**.
+  Break the code on purpose, one behaviour at a time, and run the test
+  that is supposed to guard it. Twelve deliberate breaks, twelve
+  failures - and the lazy shortcut was shown to pass the OLD test.
+  *Lesson: after writing a test, ask "what wrong implementation would
+  still pass this?" If you can name one, the test is not finished.*
+- **Do not let code certify what it cannot know.** The report called
+  the district statistics "official" whenever a source string looked
+  like the statistics portal. Whether a hand-collected file is official
+  is its owner's claim. The report now quotes the source and flags only
+  one status the project itself can vouch for: its own synthetic sample.
+- **A caveat is a claim about THIS dataset.** "2SFCA is zero-inflated"
+  was printed on the sample, where no inhabited hex has a 2SFCA of
+  zero. Caveats are now generated from measured values (and under both
+  weightings), so a sentence appears only where it is true.
+- **Check the checker.** Every figure the review handed over was
+  re-measured before it went into the decision log. They all held -
+  but one of my own older figures did not (1,440 "cold spots" is
+  really 1,446), and re-measuring is also how the seed sensitivity of
+  the hot-spot counts came to light.

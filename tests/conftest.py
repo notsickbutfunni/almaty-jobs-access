@@ -34,6 +34,49 @@ def sample_config() -> Config:
     return load_config(REPO_ROOT / "config" / "config.sample.yaml")
 
 
+@pytest.fixture(scope="session")
+def sample_pipeline(sample_config: Config, tmp_path_factory: pytest.TempPathFactory) -> Config:
+    """The whole pipeline run ONCE on the committed sample, into tmp.
+
+    prepare -> features -> model -> access; the model, access and equity
+    test modules all read this one run (treat its directories as
+    read-only: copy before mutating, as the no-transit fixture does).
+    """
+    from almaty_access.access.build import build_measures, build_times
+    from almaty_access.features.build import build_features
+    from almaty_access.model.build import build_model
+    from almaty_access.prepare.boundary import prepare_boundary
+    from almaty_access.prepare.buildings import prepare_buildings
+    from almaty_access.prepare.dem import prepare_dem
+    from almaty_access.prepare.network import prepare_networks
+    from almaty_access.prepare.pois import prepare_pois
+    from almaty_access.prepare.population import prepare_population
+    from almaty_access.prepare.transit import prepare_transit
+
+    tmp = tmp_path_factory.mktemp("sample_pipeline")
+    paths = PathsConfig(
+        root=sample_config.paths.root,
+        raw=sample_config.paths.raw,
+        interim=tmp / "interim",
+        processed=tmp / "processed",
+        sample=sample_config.paths.sample,
+        figures=tmp / "figures",
+    )
+    config = dataclasses.replace(sample_config, paths=paths)
+    prepare_boundary(config)
+    prepare_dem(config)
+    prepare_pois(config)
+    prepare_buildings(config)
+    prepare_population(config)
+    prepare_networks(config)
+    prepare_transit(config)
+    build_features(config)
+    build_model(config)
+    build_times(config)
+    build_measures(config)
+    return config
+
+
 @pytest.fixture()
 def tmp_config(repo_config: Config, tmp_path: Path) -> Config:
     """Repo config with all data paths redirected into tmp_path."""

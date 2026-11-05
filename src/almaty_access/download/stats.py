@@ -27,6 +27,10 @@ logger = logging.getLogger(__name__)
 
 FILE_NAME = "district_stats.csv"
 
+#: ``source`` value of the synthetic sample statistics: the one marker
+#: later stages may rely on to tell fake numbers from real ones.
+SYNTHETIC_SOURCE = "synthetic-for-tests"
+
 REQUIRED_COLUMNS = ("district", "year", "indicator", "value")
 OPTIONAL_COLUMNS = ("month", "unit", "source", "notes")
 
@@ -243,7 +247,7 @@ def write_synthetic_stats(config: Config) -> Path:
                 (district.key, 2024, month, "payroll_jobs_located", base_jobs + jitter, "persons")
             )
     table = pd.DataFrame(rows, columns=["district", "year", "month", "indicator", "value", "unit"])
-    table["source"] = "synthetic-for-tests"
+    table["source"] = SYNTHETIC_SOURCE
     table["notes"] = "FAKE numbers for offline tests; replace with stat.gov.kz data"
     path.parent.mkdir(parents=True, exist_ok=True)
     table.to_csv(path, index=False)

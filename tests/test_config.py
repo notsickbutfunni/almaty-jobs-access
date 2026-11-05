@@ -66,6 +66,15 @@ def test_repo_config_is_valid(repo_config: Config) -> None:
     assert circuity["subway"] < circuity["bus"]  # tunnels run straighter than streets
     assert "default" in repo_config.access.car_speeds_kmh
     assert repo_config.access.snap_max_m > 0
+    assert repo_config.equity.min_population > 0
+    assert repo_config.equity.headline_analysis[0] == "accpct_jobs_transit_45"
+    assert all(m.startswith(("acc_", "accpct_", "sfca_")) for m in repo_config.equity.headline_fine)
+    assert repo_config.equity.lisa_permutations >= 999
+    assert 0 < repo_config.equity.lisa_alpha <= 0.05
+    assert repo_config.equity.desert_pop_quantile == pytest.approx(0.75)
+    assert repo_config.equity.desert_access_quantile == pytest.approx(0.25)
+    assert repo_config.equity.headline_cutoff_pct in repo_config.equity.job_share_cutoffs_pct
+    assert 15 in repo_config.equity.nearest_thresholds_min
 
 
 def test_paths_resolve_against_repo_root(repo_config: Config, config_path: Path) -> None:
@@ -180,6 +189,30 @@ INVALID_CASES = [
     pytest.param(_delete("access.car_speeds_kmh.default"), id="car-speeds-no-default"),
     pytest.param(_set("access.car_speeds_kmh.primary", 0), id="car-speed-zero"),
     pytest.param(_delete("access"), id="access-section-missing"),
+    pytest.param(_set("equity.min_population", 0), id="equity-min-population-zero"),
+    pytest.param(
+        _set("equity.headline_measures", ["accpct_jobs_transit_45"]),
+        id="equity-headline-not-a-mapping",
+    ),
+    pytest.param(_delete("equity.headline_measures.fine"), id="equity-headline-level-missing"),
+    pytest.param(_set("equity.headline_measures.analysis", []), id="equity-headline-empty"),
+    pytest.param(
+        _set("equity.headline_measures.fine", ["near_clinic_walk_min"]),
+        id="equity-headline-not-a-benefit-measure",
+    ),
+    pytest.param(_set("equity.lisa_permutations", 50), id="equity-permutations-too-few"),
+    pytest.param(_set("equity.lisa_alpha", 0.0001), id="equity-alpha-below-resolution"),
+    pytest.param(_set("equity.lisa_alpha", 0.9), id="equity-alpha-above-half"),
+    pytest.param(_set("equity.desert_pop_quantile", 1.0), id="equity-quantile-not-open"),
+    pytest.param(_set("equity.desert_access_quantile", 0), id="equity-access-quantile-zero"),
+    pytest.param(
+        _set("equity.job_share_cutoffs_pct", [5, 1, 10]), id="equity-cutoffs-not-increasing"
+    ),
+    pytest.param(_set("equity.job_share_cutoffs_pct", [5, 150]), id="equity-cutoff-above-100"),
+    pytest.param(_set("equity.headline_cutoff_pct", 7), id="equity-headline-cutoff-not-listed"),
+    pytest.param(_set("equity.nearest_thresholds_min", [10, 12.5]), id="equity-thresholds-not-int"),
+    pytest.param(_set("equity.center_distance_bands_km", [5, 5]), id="equity-bands-not-increasing"),
+    pytest.param(_delete("equity"), id="equity-section-missing"),
 ]
 
 
