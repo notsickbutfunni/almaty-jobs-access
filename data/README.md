@@ -130,6 +130,23 @@ approximate lower-bound caveat, and the report states how much of the
 | `equity_nearest.parquet` | Share of residents within 10 / 15 / 20 / 30 walking minutes of the nearest facility, city-wide (`district = "ALL"`) and per district |
 | `equity_report.json` | Parameters, caveats (generated from the data), the calibration (source quoted verbatim, `synthetic` flag, year, district factors), one result block per weighting and resolution (cutoff shares, Moran / LISA with FDR counts and the `borderline` hexes within Monte Carlo error of alpha, deserts, mode gap, transit coverage, nearest-facility summary, centre gradient), a raster-vs-calibrated `comparison`, and the one-sentence result |
 
+### Scenario outputs (`almaty-access scenarios`, Phase 6)
+
+One scenario per GeoJSON file in `config/scenarios/` (ILLUSTRATIVE
+alignments anchored to announced projects — provenance and source links
+inside each file). The stage rebuilds only the affected mode's network
+and compares against the stored access tables; deltas are never
+negative by construction. Transit deltas inherit the approximate
+lower-bound caveat (D-044): gains are overstated where the baseline
+misses real routes.
+
+| File | Contents |
+|---|---|
+| `scenario_{name}_r8.parquet` | Per-hex baseline / scenario / delta (`{col}_base`, `{col}_scen`, `{col}_delta`) for every job-access column of the affected mode(s) — the Δ-jobs map data |
+| `scenarios_summary.parquet` | Population-weighted mean / median / Gini before and after per scenario, measure and weighting (raster + calibrated) |
+| `scenarios_gains.parquet` | Residents gaining more than each configured cutoff of jobs at the headline threshold, per scenario and weighting |
+| `scenarios_report.json` | Parameters, per-scenario network statistics (new stops/legs/routes, attachments, boosted edge-km), matrix statistics, results per weighting, generated caveats and a one-sentence result per scenario |
+
 ## Attribution
 
 - **OpenStreetMap** (and OSM-derived layers, Overture buildings):

@@ -322,3 +322,60 @@ PROCESSED_EQUITY_NEAREST = (
     "threshold_min",
     "pop_share_within",
 )
+
+# ---------------------------------------------------------------------------
+# Processed layers (data/processed/, written by `almaty-access scenarios`)
+# ---------------------------------------------------------------------------
+
+#: Feature kinds a scenario GeoJSON may contain (property ``kind``):
+#: ``line`` (a new or extending transit line, LineString), ``stop``
+#: (an explicit station of a named line, Point) and ``bike_boost``
+#: (a street corridor whose bike edges get a higher flat speed,
+#: LineString).
+SCENARIO_FEATURE_KINDS = ("line", "stop", "bike_boost")
+
+#: First synthetic identifier for scenario stops and routes: far above
+#: any OSM node/relation id (~1e10 in 2026), so merged tables can never
+#: collide with real ids.
+SCENARIO_ID_BASE = 10**12
+
+#: scenario_{name}_r{res}.parquet — one row per grid hex (plain parquet,
+#: join the grid on h3 for maps), at the analysis resolution. After the
+#: identifier columns, every affected job-access column of the access
+#: table appears three times: ``{col}_base`` (the stored baseline),
+#: ``{col}_scen`` (recomputed with the scenario network) and
+#: ``{col}_delta`` (scen - base, never negative: a scenario only adds
+#: arcs or speeds edges up, and rounding is monotone).
+SCENARIO_ID_COLUMNS = ("h3", "res", "district", "in_city")
+SCENARIO_VALUE_SUFFIXES = ("_base", "_scen", "_delta")
+
+#: scenarios_summary.parquet — population-weighted distribution of each
+#: affected relative measure (accpct_*/grav) over inhabited hexes,
+#: before and after, under both population weightings (EQUITY_WEIGHTINGS).
+PROCESSED_SCENARIOS_SUMMARY = (
+    "scenario",
+    "res",
+    "weights",
+    "measure",
+    "population",
+    "mean_base",
+    "mean_scen",
+    "median_base",
+    "median_scen",
+    "gini_base",
+    "gini_scen",
+    "gini_delta",
+)
+
+#: scenarios_gains.parquet — residents whose absolute job access at the
+#: headline threshold grows by MORE than each configured cutoff
+#: (README Phase 6: "population gaining > X jobs").
+PROCESSED_SCENARIOS_GAINS = (
+    "scenario",
+    "res",
+    "weights",
+    "measure",
+    "cutoff_jobs",
+    "residents_gaining",
+    "share_gaining",
+)

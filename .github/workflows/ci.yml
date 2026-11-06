@@ -54,3 +54,6 @@ jobs:
 
       - name: Equity on the committed sample (offline)
         run: uv run almaty-access equity -c config/config.sample.yaml -v
+
+      - name: Scenarios on the committed sample (offline)
+        run: uv run almaty-access scenarios -c config/config.sample.yaml -v

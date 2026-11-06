@@ -1202,3 +1202,162 @@ major in the notebook, 11 minors. All fixed.
 Process lesson: a review finding is a claim too. Every figure the
 re-review handed over was re-measured before it was written down (all
 held); one figure already in this log did not survive the same check.
+
+### D-065: A scenario is a GeoJSON data file, not code
+
+**Decision.** README §7 Phase 6 says "define a scenario as a GeoJSON",
+and the implementation takes that literally: one FeatureCollection per
+scenario in `config/scenarios/` (file stem = scenario name), features
+discriminated by a `kind` property — `line` (a transit line,
+LineString), `stop` (an explicit station of a named line, Point),
+`bike_boost` (a street corridor with a higher flat bike speed,
+LineString). Everything an operator might tune — mode, speed, headway,
+stop spacing, corridor width — is a feature property with defaults from
+config; provenance (title, note, source links) travels in the file's
+top-level `properties`, and the report echoes it. The alternative
+(scenarios as Python code or config fragments) was rejected: the whole
+point of the phase is that redrawing an alignment must not require
+touching the pipeline.
+
+Semantics that needed deciding, and why:
+
+- **An extension rides the same train.** A `line` with
+  `extends_route_ref` attaches its legs to every existing route of that
+  mode and ref whose first or last stop lies within
+  `scenarios.attach_max_m` of one of the drawn line's ends — appended
+  after a route that ends there, prepended before a route that starts
+  there, which extends a two-relation service (one relation per
+  direction, like the metro) in both directions. Modelling the
+  extension as its own route would charge riders a phantom second
+  boarding wait (half the headway, 3.5 min for the metro) at the old
+  terminus; a unit test holds the difference between the two modelling
+  choices to exactly that wait. Speed/headway overrides are forbidden
+  on extensions — same trains, same schedule.
+- **Drawn length is exact, so circuity must not inflate it.** Baseline
+  legs store straight-line stop-to-stop distances because OSM relations
+  carry no usable path geometry; the graph build multiplies them by a
+  per-mode circuity factor (D-046). A scenario line's length is
+  measured ALONG the drawn alignment — it IS the path — so new lines
+  ride under their own mode key (`line:<name>`) with circuity 1.0 and
+  their own speed, while extension legs (which must keep the extended
+  route's mode) are stored pre-divided by that mode's circuity so the
+  multiplication restores the drawn length. Merged tables live only in
+  memory; nothing on disk carries an adjusted distance.
+- **One route, both directions.** A new line's legs run both ways under
+  one route id: each (route, stop) pair has one virtual node, so
+  boarding pays the expected wait once and may ride either way —
+  exactly what two per-direction relations would charge.
+- **Stations order themselves along the line.** Explicit stops are
+  sorted by their projection onto the alignment (feature order is
+  irrelevant), must lie within 200 m of it, and a station within 50 m
+  of the stop an extension attaches at is that terminus redrawn — it is
+  merged away, and hop lengths are measured from the terminal's
+  projection onto the line, not from the drawn duplicate. A line
+  without drawn stops synthesizes stations every `stop_spacing_m`
+  (BRT-style regular spacing).
+- **Bike corridors match edges by overlap, not intersection.** An edge
+  belongs to a corridor when at least half its length lies inside the
+  drawn line's buffer (`bike_buffer_m`); plain intersection would catch
+  every side street crossing the corridor. Matched edges get the
+  boosted FLAT speed with the grade handling unchanged (a protected
+  lane does not flatten a hill) and are never slowed below baseline.
+- Validation is strict (unknown kinds, unknown property names, far-away
+  stops, out-of-range speeds all fail naming the file and feature): a
+  drawing typo should die at load, not surface as a silent zero-delta
+  scenario.
+
+### D-066: Scenarios rebuild only the affected mode — and must reproduce the baseline exactly
+
+**Decision.** `almaty-access scenarios` (Phase 6) never recomputes the
+baseline: it reads the stored `access_r8.parquet` as "before", merges
+each scenario into the baseline transit tables (or boosts bike edges),
+rebuilds that one mode's graph, runs the same batched-Dijkstra
+`hex_times` and the same `cumulative`/`gravity` measure code as Phase 4
+(same rounding, share computed from unrounded counts), and stores
+per-hex `{column}_base/_scen/_delta` at the analysis resolution.
+Matrices stay in memory — three scenario runs on the full city take
+seconds and write no multi-million-row files.
+
+The guarantee that makes the deltas trustworthy: running the scenario
+code path with NOTHING drawn reproduces the stored Phase 4 transit
+matrix BIT FOR BIT (a pipeline test asserts exact frame equality, and
+the per-hex `_base` columns are asserted equal to the access table).
+And because a scenario only ADDS arcs to a graph (or speeds edges up)
+and the rounding is monotone, every delta is provably >= 0 — the build
+raises if it ever sees a negative one, turning the monotonicity
+argument into a permanent bug detector. Scenario stop/route ids start
+at 10^12 (`SCENARIO_ID_BASE`), two orders of magnitude above current
+OSM ids, so merged tables cannot collide with real ids.
+
+Caching: one `ensure_built` over all scenario outputs, with every
+scenario file among the inputs; a renamed or deleted scenario's per-hex
+file is an orphan and is removed on the next build (same pattern as the
+equity stage's calibrated orphans).
+
+### D-067: Scenario equity under both weightings, on the Phase 5 domain
+
+**Decision.** The README's Phase 6 outputs — "population gaining > X
+jobs" and "change in Gini" — are produced under BOTH Phase 5 population
+weightings (D-058): the Kontur raster as prepared, and the raster with
+district totals rescaled to the employed-resident shares. The
+calibration factors are derived on the same inhabited domain (in-city,
+raster residents >= `equity.min_population`) with the same
+`calibrated_weights`/`apply_factors` recipe the equity stage uses, so a
+scenario's Gini-before equals the equity report's Gini for the same
+measure — a pipeline test asserts the match to nine digits rather than
+trusting the claim. Gains count residents of hexes whose
+`acc_jobs_{mode}_{T}` grows by MORE than each cutoff in
+`scenarios.gain_cutoffs_jobs` (city config: 1,000 / 10,000 / 50,000
+jobs, roughly 0.1% / 1% / 5% of the 1.09M city jobs), where the measure
+and threshold T come from the first `accpct_jobs_{mode}_<T>` entry of
+`equity.headline_measures.analysis` — the scenario report and the
+equity report quote the same measure by construction. The headline
+sentence quotes the MIDDLE cutoff and both weightings as a range, in
+the Phase 5 style.
+
+Running both weightings immediately earned its keep: for the BRT
+corridor the raster weighting says the transit Gini RISES (0.6215 →
+0.6238) while the calibrated weighting says it falls (0.5875 → 0.5834)
+— the equity verdict on a real project flips with the population layer,
+which is exactly the sensitivity D-058 exists to expose. The metro
+extension reduces the Gini under both weightings.
+
+### D-068: Three illustrative scenarios anchored to announced projects
+
+**Decision.** The committed scenario files model publicly announced
+projects, with alignments drawn from OSM street geometry (sampled from
+the project's own PBF extract) and every file carrying an explicit
+"illustrative, not the official design" note plus source links; the
+pipeline report repeats that caveat. Chosen with the user (2026-11-06)
+over purely synthetic demos and over waiting for official drawings.
+
+- `metro_extension.geojson` — metro line 1 extended west from
+  Бауыржан Момышұлы (the drawn line starts at the real terminus stop,
+  node 13603952094): Калқаман (under construction, ~1.9 km along the
+  Abay Avenue prolongation, matching the 1,593 m bored tunnel plus
+  station boxes), then through Шұғыла along Alatau Avenue to Барлық by
+  the Altyn Orda market (the announced Kalkaman → Barlyk section;
+  those two stations are NOT officially named — the file says so).
+  6.85 km drawn vs 8.62 km announced (tunnel curvature, depot tracks).
+  `extends_route_ref: "1"` attaches it to both metro relations.
+- `brt_raiymbek.geojson` — the suspended BRT corridor on Raiymbek Batyr
+  Avenue, Pushkin St to the Barlyk market (15.7 km drawn vs ~17
+  announced), as a new `bus` line at an assumed 22 km/h commercial
+  speed, 5-minute headway, stops synthesized every 800 m.
+- `bike_west.geojson` — the 2025-2026 mobility-plan corridors serving
+  the west: Tole Bi (11.4 km), Saina between Ryskulov and Monke Bi
+  (4.1 km) and Zhubanov (2.7 km), as `bike_boost` features raising the
+  flat bike speed 15 → 18 km/h on matched edges (678 edges, 49.5
+  directed km, on the city network).
+
+A fourth file, `config/scenarios_sample/demo_abay.geojson` (a short bus
+line plus bike lane on Abay Avenue inside the sample bbox), exists so
+tests and CI exercise the stage offline; its honest result — nobody in
+a 2 km box gains 45-minute job access — is the expected one.
+
+Standing caveats, stated in `scenarios_report.json`: deltas are
+measured against the approximate LOWER-BOUND transit baseline (D-044
+remains open), so a scenario's gain is overstated wherever the baseline
+misses real routes; the job surface is the fixed Phase 3 estimate (no
+land-use response); construction disruption and service reorganisation
+are out of scope — a scenario can only improve modelled times.

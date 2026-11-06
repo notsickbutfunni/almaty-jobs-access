@@ -1,0 +1,175 @@
+{
+ "type": "FeatureCollection",
+ "properties": {
+  "title": "Demo: express bus and bike lane on Abay Avenue (sample bbox)",
+  "note": "SYNTHETIC demo scenario for the committed sample dataset: a short express bus line and a bike lane along Abay Avenue inside the sample bounding box. Exists so tests and CI exercise the scenarios stage offline; it is not a real project.",
+  "sources": []
+ },
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "kind": "line",
+    "name": "Abay express",
+    "mode": "bus",
+    "speed_kmh": 25,
+    "headway_min": 5
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      76.92688,
+      43.24093
+     ],
+     [
+      76.92789,
+      43.241
+     ],
+     [
+      76.92889,
+      43.24108
+     ],
+     [
+      76.9299,
+      43.24115
+     ],
+     [
+      76.93091,
+      43.24123
+     ],
+     [
+      76.93192,
+      43.24129
+     ],
+     [
+      76.93292,
+      43.24135
+     ],
+     [
+      76.93393,
+      43.24142
+     ],
+     [
+      76.93494,
+      43.24149
+     ],
+     [
+      76.93594,
+      43.24156
+     ],
+     [
+      76.93695,
+      43.24163
+     ],
+     [
+      76.93796,
+      43.24169
+     ],
+     [
+      76.93897,
+      43.24176
+     ],
+     [
+      76.93997,
+      43.24183
+     ],
+     [
+      76.94098,
+      43.2419
+     ],
+     [
+      76.94199,
+      43.24197
+     ],
+     [
+      76.943,
+      43.24204
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "kind": "bike_boost",
+    "name": "Abay bike lane",
+    "speed_kmh": 18,
+    "buffer_m": 50
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      76.92688,
+      43.24093
+     ],
+     [
+      76.92789,
+      43.241
+     ],
+     [
+      76.92889,
+      43.24108
+     ],
+     [
+      76.9299,
+      43.24115
+     ],
+     [
+      76.93091,
+      43.24123
+     ],
+     [
+      76.93192,
+      43.24129
+     ],
+     [
+      76.93292,
+      43.24135
+     ],
+     [
+      76.93393,
+      43.24142
+     ],
+     [
+      76.93494,
+      43.24149
+     ],
+     [
+      76.93594,
+      43.24156
+     ],
+     [
+      76.93695,
+      43.24163
+     ],
+     [
+      76.93796,
+      43.24169
+     ],
+     [
+      76.93897,
+      43.24176
+     ],
+     [
+      76.93997,
+      43.24183
+     ],
+     [
+      76.94098,
+      43.2419
+     ],
+     [
+      76.94199,
+      43.24197
+     ],
+     [
+      76.943,
+      43.24204
+     ]
+    ]
+   }
+  }
+ ]
+}

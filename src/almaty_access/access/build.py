@@ -87,7 +87,7 @@ def _resolutions(config: Config) -> tuple[int, int]:
     return (config.h3.analysis_resolution, config.h3.fine_resolution)
 
 
-def _grid_points(config: Config, res: int) -> pd.DataFrame:
+def grid_points(config: Config, res: int) -> pd.DataFrame:
     """Grid hexes with metric centroid coordinates: h3, x, y, district, in_city."""
     grid = read_geoparquet(config.paths.processed / GRID_FILE_TEMPLATE.format(res=res))
     lat_lon = [h3.cell_to_latlng(cell) for cell in grid["h3"]]
@@ -106,7 +106,7 @@ def _grid_points(config: Config, res: int) -> pd.DataFrame:
     )
 
 
-def _street_graph(config: Config, mode: str, edge_kmh) -> ModeGraph:
+def street_graph(config: Config, mode: str, edge_kmh) -> ModeGraph:
     """Load a prepared network and weight it with ``edge_kmh(edges)``."""
     files = interim_network_files(config, mode)
     nodes = read_geoparquet(files["nodes"])
@@ -120,13 +120,13 @@ def _load_graphs(config: Config) -> tuple[dict[str, ModeGraph], bool]:
     walk_flat = config.travel.speeds_kmh["walk"]
     bike_flat = config.travel.speeds_kmh["bike"]
     graphs: dict[str, ModeGraph] = {}
-    graphs["walk"] = _street_graph(
+    graphs["walk"] = street_graph(
         config, "walk", lambda e: tobler_walk_kmh(e["grade"].to_numpy(), walk_flat)
     )
-    graphs["bike"] = _street_graph(
+    graphs["bike"] = street_graph(
         config, "bike", lambda e: bike_kmh(e["grade"].to_numpy(), bike_flat)
     )
-    graphs["car"] = _street_graph(
+    graphs["car"] = street_graph(
         config, "drive", lambda e: car_kmh(e["highway"].to_numpy(), config.access.car_speeds_kmh)
     )
 
@@ -185,7 +185,7 @@ def build_times(config: Config, *, force: bool = False) -> None:
         cutoff = float(max(config.travel.thresholds_min))
         walk_flat = config.travel.speeds_kmh["walk"]
         graphs, transit_has_routes = _load_graphs(config)
-        grids = {res: _grid_points(config, res) for res in resolutions}
+        grids = {res: grid_points(config, res) for res in resolutions}
         stats_out: dict[str, object] = {}
 
         for mode, mode_res in MODE_RESOLUTIONS.items():

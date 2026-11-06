@@ -21,6 +21,8 @@ def _mutated_config(config_path: Path, tmp_path: Path, mutate: Callable[[dict], 
     """
     raw = yaml.safe_load(config_path.read_text(encoding="utf-8-sig"))
     raw["pois"]["categories_file"] = str((config_path.parent / "poi_categories.yaml").resolve())
+    # Same for the scenario directory, which must exist at load time.
+    raw["scenarios"]["dir"] = str((config_path.parent / "scenarios").resolve())
     mutate(raw)
     out = tmp_path / "config.yaml"
     out.write_text(yaml.safe_dump(raw, allow_unicode=True), encoding="utf-8")
@@ -37,6 +39,8 @@ def test_repo_config_is_valid(repo_config: Config) -> None:
     assert repo_config.travel.thresholds_min == (15, 30, 45, 60)
     assert repo_config.travel.speeds_kmh["walk"] == pytest.approx(4.8)
     assert repo_config.travel.speeds_kmh["bike"] == pytest.approx(15.0)
+    assert repo_config.scenarios.dir.is_dir()
+    assert repo_config.scenarios.gain_cutoffs_jobs == (1000.0, 10000.0, 50000.0)
     assert repo_config.random_seed == 42
     assert len(repo_config.districts) == 8
     assert repo_config.area.place
@@ -213,6 +217,15 @@ INVALID_CASES = [
     pytest.param(_set("equity.nearest_thresholds_min", [10, 12.5]), id="equity-thresholds-not-int"),
     pytest.param(_set("equity.center_distance_bands_km", [5, 5]), id="equity-bands-not-increasing"),
     pytest.param(_delete("equity"), id="equity-section-missing"),
+    pytest.param(_set("scenarios.dir", "no/such/folder"), id="scenarios-dir-missing"),
+    pytest.param(_set("scenarios.attach_max_m", 0), id="scenarios-attach-zero"),
+    pytest.param(_set("scenarios.stop_spacing_m", -200), id="scenarios-spacing-negative"),
+    pytest.param(_set("scenarios.bike_buffer_m", "wide"), id="scenarios-buffer-not-number"),
+    pytest.param(
+        _set("scenarios.gain_cutoffs_jobs", [1000, 1000]), id="scenarios-cutoffs-not-increasing"
+    ),
+    pytest.param(_set("scenarios.gain_cutoffs_jobs", []), id="scenarios-cutoffs-empty"),
+    pytest.param(_delete("scenarios"), id="scenarios-section-missing"),
 ]
 
 

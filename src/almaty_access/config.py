@@ -266,6 +266,27 @@ class EquityConfig:
 
 
 @dataclass(frozen=True)
+class ScenariosConfig:
+    """Phase 6 scenario-analysis parameters (README §7 Phase 6)."""
+
+    dir: Path
+    """Directory of scenario GeoJSON files (one scenario per file)."""
+    attach_max_m: float
+    """An ``extends`` line claims an existing route only when one of the
+    line's endpoints lies within this distance of the route's first or
+    last stop — farther means a drawing error, not an extension."""
+    stop_spacing_m: float
+    """Default spacing of synthesized stops along a new line that has no
+    explicit stop points (overridable per line)."""
+    bike_buffer_m: float
+    """Default half-width of a bike_boost corridor: bike edges mostly
+    inside it get the boosted flat speed (overridable per feature)."""
+    gain_cutoffs_jobs: tuple[float, ...]
+    """Cutoffs for "residents gaining more than X jobs" (README Phase 6),
+    applied to the per-hex gain at the headline threshold."""
+
+
+@dataclass(frozen=True)
 class Config:
     """The full, validated project configuration."""
 
@@ -284,6 +305,7 @@ class Config:
     model: ModelConfig
     access: AccessConfig
     equity: EquityConfig
+    scenarios: ScenariosConfig
     random_seed: int
     source_path: Path
     """The YAML file this configuration was loaded from. Pipeline steps
@@ -370,6 +392,7 @@ def load_config(path: str | Path = DEFAULT_CONFIG_PATH) -> Config:
             _section(raw, "access"), _thresholds_from(travel.get("thresholds_min"))
         ),
         equity=_equity_from(_section(raw, "equity")),
+        scenarios=_scenarios_from(_section(raw, "scenarios"), root),
         random_seed=_seed_from(raw.get("random_seed")),
         source_path=resolved,
     )
@@ -935,6 +958,30 @@ def _equity_from(section: dict[str, Any]) -> EquityConfig:
         nearest_thresholds_min=tuple(thresholds),
         center_distance_bands_km=_increasing_numbers(
             section.get("center_distance_bands_km"), "equity.center_distance_bands_km"
+        ),
+    )
+
+
+def _scenarios_from(section: dict[str, Any], root: Path) -> ScenariosConfig:
+    value = _non_empty_str(section.get("dir"), "scenarios.dir")
+    candidate = Path(value)
+    resolved = candidate if candidate.is_absolute() else root / candidate
+    if not resolved.is_dir():
+        raise ValueError(f"config error: 'scenarios.dir' is not a directory: {resolved}")
+
+    def positive(key: str) -> float:
+        number = section.get(key)
+        if not _is_number(number) or number <= 0:
+            raise ValueError(f"config error: 'scenarios.{key}' must be a positive number")
+        return float(number)
+
+    return ScenariosConfig(
+        dir=resolved,
+        attach_max_m=positive("attach_max_m"),
+        stop_spacing_m=positive("stop_spacing_m"),
+        bike_buffer_m=positive("bike_buffer_m"),
+        gain_cutoffs_jobs=_increasing_numbers(
+            section.get("gain_cutoffs_jobs"), "scenarios.gain_cutoffs_jobs"
         ),
     )
 

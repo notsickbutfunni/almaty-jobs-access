@@ -12,7 +12,16 @@ from almaty_access.cli import app
 
 runner = CliRunner()
 
-PIPELINE_COMMANDS = ("download", "prepare", "features", "model", "access", "equity", "report")
+PIPELINE_COMMANDS = (
+    "download",
+    "prepare",
+    "features",
+    "model",
+    "access",
+    "equity",
+    "scenarios",
+    "report",
+)
 UTILITY_COMMANDS = ("info", "sample")
 
 STAGE_PHASES = {
@@ -89,6 +98,7 @@ def test_features_with_missing_inputs_exits_cleanly(tmp_path: Path) -> None:
     source = repo_root / "config" / "config.sample.yaml"
     raw = yaml.safe_load(source.read_text(encoding="utf-8-sig"))
     raw["pois"]["categories_file"] = str(repo_root / "config" / "poi_categories.yaml")
+    raw["scenarios"]["dir"] = str(repo_root / "config" / "scenarios_sample")
     raw["paths"] = {
         "raw": str(tmp_path / "raw"),
         "interim": str(tmp_path / "interim"),
@@ -118,6 +128,11 @@ def test_features_with_missing_inputs_exits_cleanly(tmp_path: Path) -> None:
     assert result.exit_code == 1
     assert "failed" in result.output
 
+    # And for the Phase 6 scenarios command.
+    result = runner.invoke(app, ["scenarios", "--config", str(config_file)])
+    assert result.exit_code == 1
+    assert "failed" in result.output
+
 
 def test_access_help_names_steps_and_approximation() -> None:
     result = runner.invoke(app, ["access", "--help"])
@@ -132,4 +147,12 @@ def test_equity_help_names_outputs_and_caveat() -> None:
     assert result.exit_code == 0
     flat = " ".join(result.output.split())
     assert "equity_report.json" in flat
+    assert "lower-bound" in flat
+
+
+def test_scenarios_help_names_outputs_and_caveat() -> None:
+    result = runner.invoke(app, ["scenarios", "--help"])
+    assert result.exit_code == 0
+    flat = " ".join(result.output.split())
+    assert "scenarios_report.json" in flat
     assert "lower-bound" in flat

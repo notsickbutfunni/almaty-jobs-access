@@ -253,5 +253,26 @@ equity:
   # the access gradient - the one socio-economic proxy open data supports.
   center_distance_bands_km: [2.5, 5, 7.5, 10, 15]
 
+# Phase 6 scenario analysis (README §7 Phase 6).
+scenarios:
+  # One scenario per GeoJSON file in this directory; the file stem is the
+  # scenario's name. Feature kinds: 'line' (new or extending transit
+  # line), 'stop' (explicit station of a named line), 'bike_boost'
+  # (bike corridor with a higher flat speed). The committed files are
+  # ILLUSTRATIVE alignments anchored to publicly announced projects —
+  # redraw them with official designs when those are published.
+  dir: config/scenarios
+  # An 'extends' line must start (or end) within this distance of the
+  # extended route's first or last stop; farther is a drawing error.
+  attach_max_m: 1000
+  # Default spacing of synthesized stops on a line without drawn stops.
+  stop_spacing_m: 600
+  # Default half-width of a bike_boost corridor: bike edges mostly
+  # inside it ride at the boosted flat speed (grade handling unchanged).
+  bike_buffer_m: 30
+  # "Residents gaining more than X jobs within the headline threshold"
+  # is reported for every cutoff (README Phase 6: population gaining > X).
+  gain_cutoffs_jobs: [1000, 10000, 50000]
+
 # Used to seed every random number generator in the project.
 random_seed: 42

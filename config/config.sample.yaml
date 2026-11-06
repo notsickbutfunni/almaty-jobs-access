@@ -154,4 +154,13 @@ equity:
   nearest_thresholds_min: [10, 15, 20, 30]
   center_distance_bands_km: [2.5, 5, 7.5, 10, 15]
 
+# Phase 6 scenario analysis: a small demo scenario inside the sample
+# bbox, so the stage runs offline in tests and CI.
+scenarios:
+  dir: config/scenarios_sample
+  attach_max_m: 1000
+  stop_spacing_m: 600
+  bike_buffer_m: 30
+  gain_cutoffs_jobs: [100, 1000, 5000]
+
 random_seed: 42

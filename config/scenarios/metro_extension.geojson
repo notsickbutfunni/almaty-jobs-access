@@ -1,0 +1,262 @@
+{
+ "type": "FeatureCollection",
+ "properties": {
+  "title": "Metro line 1 extension: B. Momyshuly to Kalkaman and Barlyk",
+  "note": "ILLUSTRATIVE alignment anchored to the announced extension: the Kalkaman station (under construction, ~99% complete as of early 2026) and the follow-on section toward the Barlyk market through the Shugyla microdistrict along Alatau Avenue (construction started 2026). Drawn from OSM street geometry (Abay Avenue prolongation, Alatau Avenue); the stations beyond Kalkaman are NOT officially named - 'Shugyla' and 'Barlyk' are placeholders at plausible locations. Replace with the official design when published.",
+  "sources": [
+   "https://tengrinews.kz/news/budet-stantsiya-metro-kalkaman-almatyi-kogda-e-otkroyut-594445/",
+   "https://www.zakon.kz/stati/6511691-novaya-stantsiya-metro-kalkaman-v-almaty-chto-uzhe-gotovo-i-kogda-zapusk.html",
+   "https://kapital.kz/gosudarstvo/152857/v-almaty-do-konca-2026-goda-otkroyut-stanciyu-metro-kalkaman-akimat.html",
+   "https://ru.wikipedia.org/wiki/Алматинский_метрополитен"
+  ]
+ },
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "kind": "line",
+    "name": "Kalkaman extension",
+    "mode": "subway",
+    "extends_route_ref": "1"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      76.83786,
+      43.21633
+     ],
+     [
+      76.8361,
+      43.21597
+     ],
+     [
+      76.83433,
+      43.2156
+     ],
+     [
+      76.83257,
+      43.21523
+     ],
+     [
+      76.83081,
+      43.21485
+     ],
+     [
+      76.82905,
+      43.21449
+     ],
+     [
+      76.82729,
+      43.2141
+     ],
+     [
+      76.82556,
+      43.21367
+     ],
+     [
+      76.82386,
+      43.21316
+     ],
+     [
+      76.8222,
+      43.2126
+     ],
+     [
+      76.82055,
+      43.21202
+     ],
+     [
+      76.8189,
+      43.21142
+     ],
+     [
+      76.81726,
+      43.21083
+     ],
+     [
+      76.81558,
+      43.21044
+     ],
+     [
+      76.81378,
+      43.21068
+     ],
+     [
+      76.81197,
+      43.21092
+     ],
+     [
+      76.81017,
+      43.21116
+     ],
+     [
+      76.80837,
+      43.21141
+     ],
+     [
+      76.80656,
+      43.21165
+     ],
+     [
+      76.80476,
+      43.21189
+     ],
+     [
+      76.80296,
+      43.21213
+     ],
+     [
+      76.80116,
+      43.21237
+     ],
+     [
+      76.79935,
+      43.21262
+     ],
+     [
+      76.79755,
+      43.21286
+     ],
+     [
+      76.79575,
+      43.2131
+     ],
+     [
+      76.79394,
+      43.21334
+     ],
+     [
+      76.79214,
+      43.21358
+     ],
+     [
+      76.79034,
+      43.21382
+     ],
+     [
+      76.78853,
+      43.21407
+     ],
+     [
+      76.78722,
+      43.21486
+     ],
+     [
+      76.78612,
+      43.21593
+     ],
+     [
+      76.785,
+      43.21699
+     ],
+     [
+      76.78397,
+      43.2181
+     ],
+     [
+      76.78305,
+      43.21926
+     ],
+     [
+      76.78219,
+      43.22044
+     ],
+     [
+      76.78137,
+      43.22164
+     ],
+     [
+      76.78059,
+      43.22285
+     ],
+     [
+      76.77983,
+      43.22407
+     ],
+     [
+      76.77907,
+      43.22529
+     ],
+     [
+      76.77855,
+      43.22657
+     ],
+     [
+      76.77827,
+      43.22789
+     ],
+     [
+      76.77801,
+      43.22922
+     ],
+     [
+      76.77753,
+      43.2305
+     ],
+     [
+      76.7762,
+      43.23116
+     ],
+     [
+      76.77439,
+      43.23139
+     ],
+     [
+      76.77258,
+      43.23161
+     ],
+     [
+      76.77077,
+      43.23183
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "kind": "stop",
+    "name": "Калқаман",
+    "line": "Kalkaman extension"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     76.81602,
+     43.21038
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "kind": "stop",
+    "name": "Шұғыла (placeholder)",
+    "line": "Kalkaman extension"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     76.78786,
+     43.21416
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "kind": "stop",
+    "name": "Барлық (placeholder)",
+    "line": "Kalkaman extension"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     76.77077,
+     43.23183
+    ]
+   }
+  }
+ ]
+}

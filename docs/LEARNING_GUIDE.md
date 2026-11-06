@@ -1227,3 +1227,163 @@ theme worth remembering.
   but one of my own older figures did not (1,440 "cold spots" is
   really 1,446), and re-measuring is also how the seed sensitivity of
   the hot-spot counts came to light.
+
+# Phase 6 - Scenario analysis
+
+## What a scenario is (and is not)
+
+A scenario answers one question: **if this piece of infrastructure
+existed, who could reach how many more jobs?** It is a GeoJSON file -
+a drawn line with a handful of properties - not code. The pipeline
+merges the drawing into the baseline transit tables (or speeds up the
+drawn bike corridors), rebuilds ONLY that mode's travel-time graph,
+recomputes the job-access measures with exactly the Phase 4 code, and
+subtracts: `delta = scenario - baseline`, per hex.
+
+What it is NOT: a ridership forecast. Nothing here says anyone will
+RIDE the new line - no demand model, no mode choice, no congestion
+relief. The claim is strictly about **potential access**: the jobs a
+resident *could* reach within a time budget. That is a real planning
+quantity (it is what "opportunity access" literature measures), and
+its honesty is the point: it needs no behavioural assumptions beyond
+the assumed speeds and headways, which sit in the file for anyone to
+edit.
+
+## The one free lunch: deltas can never be negative
+
+Adding a line only ADDS arcs to the graph; boosting a corridor only
+lowers edge times. Dijkstra's shortest path on a graph with extra arcs
+can only stay equal or get faster, cumulative counts can only grow,
+and rounding is monotone (if x2 >= x1 then round(x2) >= round(x1)). So
+every delta is >= 0 **by mathematical construction** - and that is a
+gift for testing: the build refuses to continue if it ever computes a
+negative delta, because a negative delta can only mean a bug. The
+matching guarantee on the other side: run the scenario machinery with
+nothing drawn and it reproduces the stored Phase 4 transit matrix
+bit for bit (a test asserts exact equality). Between those two rails -
+"nothing drawn changes nothing" and "something drawn never hurts" -
+the deltas are hard to fake accidentally.
+
+## The transfer question - why the metro extension is NOT a new line
+
+The frequency-based transit model charges half the headway at every
+boarding (expected wait of a random arrival). If the Kalkaman
+extension were modelled as a separate route touching B. Momyshuly,
+every rider continuing west would "transfer": alight, re-board, pay
+another 7/2 = 3.5 minutes that no real passenger pays - the train just
+keeps going. So an extension (`extends_route_ref`) APPENDS its legs to
+the existing route relations - to both of them, one per direction: the
+one that ENDS at the terminus gets the legs appended, the one that
+STARTS there gets them prepended in reverse. A unit test models the
+same drawn line both ways and asserts the difference is exactly the
+phantom wait.
+
+Two more mechanics worth being able to defend:
+
+- **Distances.** Baseline legs are straight lines times a per-mode
+  circuity factor (OSM relations carry no path geometry). A scenario
+  line's drawn geometry IS the path, so its length is measured along
+  the drawing and must NOT be inflated again: new lines ride with
+  circuity 1.0 under their own speed entry, and extension legs are
+  stored pre-divided by the route mode's circuity so the graph build's
+  multiplication restores the true length.
+- **Bike corridors.** "Protected lane" is modelled as a higher FLAT
+  speed (15 -> 18 km/h) on street edges that lie mostly (>= 50% of
+  their length) inside the corridor buffer - intersection alone would
+  catch every side street that merely crosses it. Grade handling stays:
+  a bike lane does not flatten a hill. And an edge is never slowed:
+  where the baseline already rides faster (steep descents at the
+  capped bonus), the baseline time is kept.
+
+## Who gains, and does inequality fall? (the Phase 5 toolkit, reused)
+
+For each scenario the report answers the README's three questions:
+
+1. **Δ-jobs map**: per-hex `_delta` columns, ready to color.
+2. **Population gaining more than X jobs**: residents of hexes whose
+   45-minute job count grows by more than 1,000 / 10,000 / 50,000
+   (about 0.1% / 1% / 5% of the city's 1.09M jobs).
+3. **ΔGini**: the population-weighted Gini of the headline measure
+   (`accpct_jobs_<mode>_45`), before and after - the same function, the
+   same inhabited domain and the same two population weightings as
+   Phase 5, which a test pins by asserting the scenario's "before" Gini
+   equals the equity report's Gini to nine digits.
+
+The 2026 announced projects, measured against the lower-bound baseline:
+
+| Scenario | gain > 10k jobs (45 min) | Gini raster | Gini calibrated |
+|---|---|---|---|
+| Metro -> Kalkaman/Barlyk | 16-21k residents (1.1-1.4%) | 0.6215 -> 0.6182 | 0.5875 -> 0.5833 |
+| BRT Raiymbek | 264-296k residents (17-19%) | 0.6215 -> **0.6238** | 0.5875 -> 0.5834 |
+| Bike west (Tole bi/Saina/Zhubanov) | 265-297k residents (17-20%) | 0.2547 -> 0.2524 | 0.2267 -> 0.2239 |
+
+Two lessons sit in that table. First, **reach and equity are different
+axes**: the BRT helps an order of magnitude more people than the metro
+extension (a 15.7 km corridor vs 6.9 km at the city edge), but the
+metro is the one that unambiguously reduces inequality - it serves the
+worst-served west end. Second, the BRT's raster-weighted Gini goes UP
+while its calibrated Gini goes DOWN: **the equity verdict on a real
+project flips with the population layer**. A Gini can rise even though
+nobody lost access, because Gini measures relative shares - raising
+the middle of a distribution faster than its bottom increases
+dispersion. This is exactly why Phase 5 runs every statistic under two
+weightings, and the scenario report quotes both, always.
+
+## Interview Q&A
+
+- *"Why trust these deltas when your transit baseline is a lower
+  bound?"* - I would not call them precise; I call them bounded and
+  honest. The baseline misses routes (193 of 293 relations in the
+  country extract are ways-only), so part of a "gain" may already
+  exist on the street today - the report says so in its caveats. The
+  deltas are best read as the access the infrastructure guarantees,
+  measured consistently against the same baseline for every scenario,
+  which is what makes scenarios COMPARABLE with each other.
+- *"Why no ridership model?"* - Because I will not present numbers I
+  cannot defend. A four-step or activity-based demand model needs
+  surveys and calibration data this project does not have. Potential
+  access needs geometry, speeds and headways - all of which are in a
+  file you can read and edit. The access deltas are also the raw
+  ingredient a later demand model would consume.
+- *"Your metro extension headline looks small - 1.1% of residents.
+  Is the project bad?"* - No: the catchment at the city's western
+  edge is thin TODAY (that is partly why the area is underserved, and
+  partly the Kontur raster undercounting new microdistricts - the
+  calibrated weighting already shows a third more beneficiaries). The
+  equity result is the stronger finding: it is the one scenario that
+  lowers the transit Gini under BOTH weightings. And the model holds
+  jobs fixed; station-area development is exactly what it cannot see.
+- *"Why is the sample demo's answer zero?"* - In a 2 km box, every
+  hex already reaches everything within 45 minutes, so the honest
+  delta at that threshold is zero (the gains show up at the 15-minute
+  threshold instead). A sanity check that returns a non-trivial zero
+  is worth keeping.
+
+## What went wrong before it went right (Phase 6 edition)
+
+- **The metro extension initially headed east.** The alignment is cut
+  from Abay Avenue's merged OSM geometry by walking N metres along it
+  from the terminus - and "along it" depends on which end the
+  component's coordinates start at. The first version walked toward
+  the city centre: an 11.1 km "extension" doubling back on itself. A
+  printed length (11.1 km vs the announced 8.6) was the tell. The fix
+  chooses the direction whose endpoint is actually west. *Lesson:
+  anything derived from line PARAMETRIZATION (project/interpolate/
+  substring) must pin the orientation explicitly - component
+  coordinate order is an accident of the merge.*
+- **The redrawn-terminus merge measured the ride from the wrong
+  point.** When a drawn station duplicates the terminus (within 50 m)
+  it is merged away - but the first version then measured the next
+  hop from the MERGED STATION's position on the line, silently
+  dropping the 10 m between terminus and duplicate; a toy test with
+  exact distances caught the 9.6 m error. Hops are now measured from
+  the terminal's PROJECTION onto the drawn line, which also handles a
+  line drawn slightly past the terminus. *Lesson: after deleting an
+  entity, re-derive geometry from first principles; do not inherit
+  bookkeeping that referenced the deleted thing.*
+- **A guard-rail test guarded less than it claimed.** The "synthetic
+  ids clear OSM ids" test asserted `10^12 > 2^40` - which is false
+  (2^40 ≈ 1.1 x 10^12), so the test failed its own arithmetic rather
+  than any code. The margin that matters is against real OSM ids
+  (~1.2 x 10^10). *Lesson: a bound in a test is a claim too - compute
+  it, do not eyeball powers.*

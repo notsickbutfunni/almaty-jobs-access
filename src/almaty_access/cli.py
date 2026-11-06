@@ -1,11 +1,12 @@
 """Command-line interface: ``almaty-access``.
 
 Each sub-command is one pipeline stage (README §6-§7): ``download`` →
-``prepare`` → ``features`` → ``model`` → ``access`` → ``equity``, each
-with make-style caching (``--force`` rebuilds; multi-step stages take
-``--only``). Stages of later phases validate the configuration, then
-exit with code 2 and point at their phase. Exit codes: 0 success,
-1 config or pipeline error, 2 stage not implemented yet.
+``prepare`` → ``features`` → ``model`` → ``access`` → ``equity`` →
+``scenarios``, each with make-style caching (``--force`` rebuilds;
+multi-step stages take ``--only``). Stages of later phases validate the
+configuration, then exit with code 2 and point at their phase. Exit
+codes: 0 success, 1 config or pipeline error, 2 stage not implemented
+yet.
 """
 
 from __future__ import annotations
@@ -37,6 +38,7 @@ from almaty_access.prepare import network as prep_network
 from almaty_access.prepare import pois as prep_pois
 from almaty_access.prepare import population as prep_population
 from almaty_access.prepare import transit as prep_transit
+from almaty_access.scenarios import build as scenarios_build
 
 app = typer.Typer(
     name="almaty-access",
@@ -328,6 +330,29 @@ def equity(
     """
     cfg = _load_and_seed(config, verbose)
     _run_steps({"equity": equity_build.build_equity}, cfg, only=None, force=force, verbose=verbose)
+
+
+@app.command()
+def scenarios(
+    config: ConfigOpt = DEFAULT_CONFIG,
+    force: ForceOpt = False,
+    verbose: VerboseOpt = False,
+) -> None:
+    """What each drawn scenario changes, and for whom. [Phase 6]
+
+    Reads every GeoJSON in scenarios.dir (new/extended transit lines,
+    bike corridors), rebuilds the affected mode's network, recomputes
+    job access at the analysis resolution and writes per-hex deltas
+    (scenario_{name}_r8.parquet), scenarios_summary.parquet,
+    scenarios_gains.parquet and scenarios_report.json (population
+    gaining > X jobs and the Gini change per scenario, under both
+    population weightings). Requires `almaty-access access` to have run.
+    Transit deltas inherit the approximate lower-bound caveat.
+    """
+    cfg = _load_and_seed(config, verbose)
+    _run_steps(
+        {"scenarios": scenarios_build.build_scenarios}, cfg, only=None, force=force, verbose=verbose
+    )
 
 
 @app.command()
