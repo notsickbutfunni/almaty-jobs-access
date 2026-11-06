@@ -11,9 +11,11 @@ repos:
       - id: check-merge-conflict
       # Safety net against accidentally committing raw geodata.
       # --enforce-all checks every tracked file, not just staged additions,
-      # so the guard also works in CI on a fresh checkout.
+      # so the guard also works in CI on a fresh checkout. 6 MB clears the
+      # largest deliberate commit (data/app/tt_car_r8.parquet, ~4.8 MB,
+      # D-069) while still catching stray rasters and PBF extracts.
       - id: check-added-large-files
-        args: ["--maxkb=2048", "--enforce-all"]
+        args: ["--maxkb=6144", "--enforce-all"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.17.3

@@ -32,6 +32,8 @@ def test_extractor_on_committed_sample_pbf(sample_config: Config, tmp_path) -> N
         processed=tmp_path / "processed",
         sample=sample_config.paths.sample,
         figures=tmp_path / "figures",
+        app=tmp_path / "app",
+        webmap=tmp_path / "webmap",
     )
     config = dataclasses.replace(sample_config, paths=paths)
     config.paths.raw.mkdir(parents=True)

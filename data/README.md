@@ -147,6 +147,22 @@ misses real routes.
 | `scenarios_gains.parquet` | Residents gaining more than each configured cutoff of jobs at the headline threshold, per scenario and weighting |
 | `scenarios_report.json` | Parameters, per-scenario network statistics (new stops/legs/routes, attachments, boosted edge-km), matrix statistics, results per weighting, generated caveats and a one-sentence result per scenario |
 
+### Dashboard bundle (`almaty-access export`, Phase 7 — COMMITTED)
+
+`data/app/` is the one exception to "processed data never goes into
+git" (D-069): a curated copy of exactly the files the Streamlit
+dashboard reads — the r8 access / jobs / equity / scenario tables, the
+four r8 travel-time matrices, the long equity tables and the report
+JSONs, ~7 MB in total — plus a deterministic `manifest.json` (names and
+byte sizes, no timestamps). Committing it lets Streamlit Community
+Cloud and any clone serve the dashboard with zero extra infrastructure;
+everything inside is derived from the open sources below and inherits
+their caveats (approximate lower-bound transit, free-flow car,
+modelled jobs). `docs/webmap/index.html` (the static map GitHub Pages
+serves) is committed for the same reason. Refresh both with
+`almaty-access export` after a pipeline run; the sample equivalents
+(`data/sample/app/`, `data/sample/webmap/`) stay git-ignored.
+
 ## Attribution
 
 - **OpenStreetMap** (and OSM-derived layers, Overture buildings):

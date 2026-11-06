@@ -1,0 +1,319 @@
+{
+  "approximate_transit": true,
+  "params": {
+    "cutoff_min": 60.0,
+    "thresholds_min": [
+      15,
+      30,
+      45,
+      60
+    ],
+    "speeds_kmh": {
+      "bike": 15.0,
+      "walk": 4.8
+    },
+    "transit_assumed_speeds_kmh": {
+      "bus": 17.0,
+      "trolleybus": 15.0,
+      "subway": 32.0
+    },
+    "transit_assumed_headways_min": {
+      "bus": 10.0,
+      "trolleybus": 12.0,
+      "subway": 7.0
+    },
+    "transit_circuity": {
+      "bus": 1.3,
+      "trolleybus": 1.3,
+      "subway": 1.05
+    },
+    "gravity_half_life_min": 20.0,
+    "sfca_catchment_min": 15,
+    "park_min_m2": 10000.0,
+    "snap_max_m": 2000.0,
+    "car_speeds_kmh": {
+      "motorway": 90.0,
+      "trunk": 70.0,
+      "primary": 60.0,
+      "secondary": 50.0,
+      "tertiary": 45.0,
+      "unclassified": 40.0,
+      "residential": 30.0,
+      "living_street": 15.0,
+      "service": 20.0,
+      "default": 30.0
+    }
+  },
+  "transit_network": {
+    "relations_with_stops": 100,
+    "relations_without_stops": 193,
+    "routes_kept": 55,
+    "routes_outside_area": 45,
+    "routes_kept_by_mode": {
+      "bus": 48,
+      "trolleybus": 5,
+      "subway": 2
+    },
+    "stops_kept": 291,
+    "legs": 396,
+    "legs_dropped_too_long": 0,
+    "relations_with_parseable_interval": 8,
+    "routes_kept_headway_from_tag": 2
+  },
+  "matrices": {
+    "tt_walk_r8.parquet": {
+      "origins_offnetwork": 26,
+      "dests_offnetwork": 26,
+      "snap_m_median": 164.2,
+      "snap_m_p95": 1083.0,
+      "pairs": 38737
+    },
+    "tt_walk_r9.parquet": {
+      "origins_offnetwork": 175,
+      "dests_offnetwork": 175,
+      "snap_m_median": 161.7,
+      "snap_m_p95": 1074.3,
+      "pairs": 1891915
+    },
+    "tt_bike_r8.parquet": {
+      "origins_offnetwork": 32,
+      "dests_offnetwork": 32,
+      "snap_m_median": 172.3,
+      "snap_m_p95": 1285.3,
+      "pairs": 322557
+    },
+    "tt_transit_r8.parquet": {
+      "origins_offnetwork": 26,
+      "dests_offnetwork": 26,
+      "snap_m_median": 164.2,
+      "snap_m_p95": 1083.0,
+      "pairs": 42596
+    },
+    "tt_car_r8.parquet": {
+      "origins_offnetwork": 444,
+      "dests_offnetwork": 444,
+      "snap_m_median": 379.6,
+      "snap_m_p95": 9411.9,
+      "pairs": 1695327
+    }
+  },
+  "gravity_sensitivity": {
+    "half_life_min": 20.0,
+    "spearman_vs": {
+      "half_life_10": 0.9965,
+      "half_life_30": 0.9995
+    }
+  },
+  "spot_checks": [
+    {
+      "origin_h3": "8820e60227fffff",
+      "dest_h3": "8820e60315fffff",
+      "origin_latlng": [
+        43.3683,
+        76.92959
+      ],
+      "dest_latlng": [
+        43.34377,
+        76.91326
+      ],
+      "minutes": {
+        "walk": 53.2,
+        "bike": 20.4,
+        "transit": 53.2,
+        "car": 9.8
+      }
+    },
+    {
+      "origin_h3": "8820e6010dfffff",
+      "dest_h3": "8820e60143fffff",
+      "origin_latlng": [
+        43.28926,
+        76.92489
+      ],
+      "dest_latlng": [
+        43.30494,
+        76.92334
+      ],
+      "minutes": {
+        "walk": 32.4,
+        "bike": 25.1,
+        "transit": 32.4,
+        "car": 8.6
+      }
+    },
+    {
+      "origin_h3": "8820e619a9fffff",
+      "dest_h3": "8820e656d1fffff",
+      "origin_latlng": [
+        43.21154,
+        76.80158
+      ],
+      "dest_latlng": [
+        43.19448,
+        76.77835
+      ],
+      "minutes": {
+        "walk": 49.0,
+        "bike": 21.6,
+        "transit": 49.0,
+        "car": 10.8
+      }
+    },
+    {
+      "origin_h3": "8820e601cdfffff",
+      "dest_h3": "8820e60029fffff",
+      "origin_latlng": [
+        43.30832,
+        76.98547
+      ],
+      "dest_latlng": [
+        43.33081,
+        76.96453
+      ],
+      "minutes": {
+        "walk": 49.9,
+        "bike": 19.3,
+        "transit": 49.9,
+        "car": 10.0
+      }
+    },
+    {
+      "origin_h3": "8820e600e3fffff",
+      "dest_h3": "8820e600e7fffff",
+      "origin_latlng": [
+        43.34301,
+        77.04456
+      ],
+      "dest_latlng": [
+        43.33484,
+        77.03911
+      ],
+      "minutes": {
+        "walk": 20.8,
+        "bike": 8.4,
+        "transit": 20.8,
+        "car": 11.3
+      }
+    },
+    {
+      "origin_h3": "8820e60129fffff",
+      "dest_h3": "8820e60ac7fffff",
+      "origin_latlng": [
+        43.2736,
+        76.92644
+      ],
+      "dest_latlng": [
+        43.24429,
+        76.96676
+      ],
+      "minutes": {
+        "walk": null,
+        "bike": 32.1,
+        "transit": null,
+        "car": 10.7
+      }
+    },
+    {
+      "origin_h3": "8820e619abfffff",
+      "dest_h3": "8820e619e5fffff",
+      "origin_latlng": [
+        43.21224,
+        76.81398
+      ],
+      "dest_latlng": [
+        43.21015,
+        76.77677
+      ],
+      "minutes": {
+        "walk": 49.0,
+        "bike": 16.2,
+        "transit": 49.0,
+        "car": 5.8
+      }
+    },
+    {
+      "origin_h3": "8820e60aa9fffff",
+      "dest_h3": "8820e61aa5fffff",
+      "origin_latlng": [
+        43.22113,
+        76.97526
+      ],
+      "dest_latlng": [
+        43.30556,
+        76.7921
+      ],
+      "minutes": {
+        "walk": null,
+        "bike": null,
+        "transit": null,
+        "car": 33.8
+      }
+    },
+    {
+      "origin_h3": "8820e646bdfffff",
+      "dest_h3": "8820e60a15fffff",
+      "origin_latlng": [
+        43.05562,
+        76.97272
+      ],
+      "dest_latlng": [
+        43.23408,
+        76.92409
+      ],
+      "minutes": {
+        "walk": null,
+        "bike": null,
+        "transit": null,
+        "car": null
+      }
+    },
+    {
+      "origin_h3": "8820e6093dfffff",
+      "dest_h3": "8820e602ebfffff",
+      "origin_latlng": [
+        43.10807,
+        76.92404
+      ],
+      "dest_latlng": [
+        43.40302,
+        76.98872
+      ],
+      "minutes": {
+        "walk": null,
+        "bike": null,
+        "transit": null,
+        "car": 46.9
+      }
+    }
+  ],
+  "total_jobs": {
+    "r8": 1091192.5,
+    "r9": 1091192.5
+  },
+  "coverage": {
+    "r8": {
+      "walk": {
+        "share_reaching_jobs_30": 0.8762,
+        "median_jobs_45": 4160.1
+      },
+      "bike": {
+        "share_reaching_jobs_30": 0.9839,
+        "median_jobs_45": 110330.8
+      },
+      "transit": {
+        "share_reaching_jobs_30": 0.8762,
+        "median_jobs_45": 4238.3
+      },
+      "car": {
+        "share_reaching_jobs_30": 0.8364,
+        "median_jobs_45": 1042490.8
+      }
+    },
+    "r9": {
+      "walk": {
+        "share_reaching_jobs_30": 0.8856,
+        "median_jobs_45": 6570.1
+      }
+    }
+  }
+}

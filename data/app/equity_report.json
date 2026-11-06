@@ -1,0 +1,2245 @@
+{
+  "params": {
+    "min_population": 1.0,
+    "headline_measures": {
+      "r8": [
+        "accpct_jobs_transit_45",
+        "accpct_jobs_car_45",
+        "accpct_jobs_bike_45",
+        "accpct_jobs_walk_30"
+      ],
+      "r9": [
+        "accpct_jobs_walk_30",
+        "sfca_schools_walk",
+        "sfca_kindergartens_walk",
+        "sfca_clinics_walk"
+      ]
+    },
+    "lisa_permutations": 9999,
+    "lisa_alpha": 0.05,
+    "lisa_p_value": "tie-aware two-sided (twice the smaller tail)",
+    "desert_pop_quantile": 0.75,
+    "desert_access_quantile": 0.25,
+    "job_share_cutoffs_pct": [
+      1.0,
+      5.0,
+      10.0,
+      25.0
+    ],
+    "headline_cutoff_pct": 5.0,
+    "nearest_thresholds_min": [
+      10,
+      15,
+      20,
+      30
+    ],
+    "center_distance_bands_km": [
+      2.5,
+      5.0,
+      7.5,
+      10.0,
+      15.0
+    ],
+    "car_dependent_ratio": 0.25,
+    "random_seed": 42
+  },
+  "weightings": {
+    "raster": "Kontur Population as prepared in Phase 1",
+    "calibrated": "hex residents rescaled so that district totals follow the district shares of employed residents in district_stats.csv (2025; source: taldau.stat.gov.kz GetIndexTreeData p_index_id=702840); the city total and the within-district distribution are unchanged"
+  },
+  "calibration": {
+    "indicator": "employed_residents",
+    "year": 2025,
+    "source": "taldau.stat.gov.kz GetIndexTreeData p_index_id=702840",
+    "synthetic": false,
+    "district_factors": {
+      "r8": {
+        "alatau": 0.784,
+        "almaly": 1.5514,
+        "auezov": 2.7846,
+        "bostandyk": 1.1253,
+        "medeu": 0.7317,
+        "nauryzbay": 1.3029,
+        "turksib": 0.6978,
+        "zhetysu": 0.6963
+      },
+      "r9": {
+        "alatau": 0.8091,
+        "almaly": 1.6632,
+        "auezov": 2.367,
+        "bostandyk": 1.0773,
+        "medeu": 0.7336,
+        "nauryzbay": 1.4124,
+        "turksib": 0.6639,
+        "zhetysu": 0.7319
+      }
+    },
+    "district_shares": {
+      "r8": {
+        "alatau": {
+          "raster": 0.2134,
+          "target": 0.1673
+        },
+        "almaly": {
+          "raster": 0.0763,
+          "target": 0.1183
+        },
+        "auezov": {
+          "raster": 0.0528,
+          "target": 0.1469
+        },
+        "bostandyk": {
+          "raster": 0.1399,
+          "target": 0.1575
+        },
+        "medeu": {
+          "raster": 0.1555,
+          "target": 0.1138
+        },
+        "nauryzbay": {
+          "raster": 0.0722,
+          "target": 0.094
+        },
+        "turksib": {
+          "raster": 0.1632,
+          "target": 0.1139
+        },
+        "zhetysu": {
+          "raster": 0.1268,
+          "target": 0.0883
+        }
+      },
+      "r9": {
+        "alatau": {
+          "raster": 0.2067,
+          "target": 0.1673
+        },
+        "almaly": {
+          "raster": 0.0711,
+          "target": 0.1183
+        },
+        "auezov": {
+          "raster": 0.0621,
+          "target": 0.1469
+        },
+        "bostandyk": {
+          "raster": 0.1462,
+          "target": 0.1575
+        },
+        "medeu": {
+          "raster": 0.1551,
+          "target": 0.1138
+        },
+        "nauryzbay": {
+          "raster": 0.0666,
+          "target": 0.094
+        },
+        "turksib": {
+          "raster": 0.1715,
+          "target": 0.1139
+        },
+        "zhetysu": {
+          "raster": 0.1207,
+          "target": 0.0883
+        }
+      }
+    }
+  },
+  "population": {
+    "r8": {
+      "city": 1523203.0,
+      "inhabited_hexes": 712,
+      "inhabited_population": 1523203.0,
+      "inhabited_pop_share": 1.0,
+      "point_mass_hexes": 0,
+      "point_mass_population": 0.0
+    },
+    "r9": {
+      "city": 1494986.0,
+      "inhabited_hexes": 3329,
+      "inhabited_population": 1494892.0,
+      "inhabited_pop_share": 0.999937,
+      "point_mass_hexes": 12,
+      "point_mass_population": 37028.0
+    }
+  },
+  "results": {
+    "raster": {
+      "r8": {
+        "population": 1523203.0,
+        "inhabited_hexes": 712,
+        "lisa": {
+          "accpct_jobs_transit_45": {
+            "global_moran": {
+              "I": 0.9038,
+              "expected_I": -0.0014,
+              "p_sim": 0.0001,
+              "z_sim": 37.8
+            },
+            "zero_share_hexes": 0.0,
+            "clusters": {
+              "ns": 473,
+              "LL": 157,
+              "HH": 78,
+              "island": 4
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 9,
+              "not_significant": 4
+            },
+            "fdr": {
+              "significant": 134,
+              "hot_spots": 63,
+              "cold_spots": 71,
+              "tests": 708,
+              "min_p": 0.0002,
+              "n_at_floor": 35,
+              "n_needed": 3
+            },
+            "cold_spot_population": 31970.0,
+            "cold_spot_pop_share": 0.021,
+            "hot_spot_pop_share": 0.2434,
+            "cold_spot_fdr_pop_share": 0.0079
+          },
+          "accpct_jobs_car_45": {
+            "global_moran": {
+              "I": 0.8353,
+              "expected_I": -0.0014,
+              "p_sim": 0.0001,
+              "z_sim": 34.64
+            },
+            "zero_share_hexes": 0.0365,
+            "clusters": {
+              "ns": 475,
+              "HH": 198,
+              "LL": 35,
+              "island": 4
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 3,
+              "not_significant": 5
+            },
+            "fdr": {
+              "significant": 199,
+              "hot_spots": 169,
+              "cold_spots": 30,
+              "tests": 708,
+              "min_p": 0.0002,
+              "n_at_floor": 56,
+              "n_needed": 3
+            },
+            "cold_spot_population": 886.0,
+            "cold_spot_pop_share": 0.0006,
+            "hot_spot_pop_share": 0.5725,
+            "cold_spot_fdr_pop_share": 0.0005
+          },
+          "accpct_jobs_bike_45": {
+            "global_moran": {
+              "I": 0.9582,
+              "expected_I": -0.0014,
+              "p_sim": 0.0001,
+              "z_sim": 39.52
+            },
+            "zero_share_hexes": 0.0,
+            "clusters": {
+              "ns": 352,
+              "LL": 183,
+              "HH": 173,
+              "island": 4
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 7,
+              "not_significant": 10
+            },
+            "fdr": {
+              "significant": 283,
+              "hot_spots": 155,
+              "cold_spots": 128,
+              "tests": 708,
+              "min_p": 0.0002,
+              "n_at_floor": 93,
+              "n_needed": 3
+            },
+            "cold_spot_population": 51252.0,
+            "cold_spot_pop_share": 0.0336,
+            "hot_spot_pop_share": 0.5159,
+            "cold_spot_fdr_pop_share": 0.0142
+          },
+          "accpct_jobs_walk_30": {
+            "global_moran": {
+              "I": 0.9213,
+              "expected_I": -0.0014,
+              "p_sim": 0.0001,
+              "z_sim": 38.58
+            },
+            "zero_share_hexes": 0.0028,
+            "clusters": {
+              "ns": 514,
+              "LL": 124,
+              "HH": 70,
+              "island": 4
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 12,
+              "not_significant": 7
+            },
+            "fdr": {
+              "significant": 103,
+              "hot_spots": 52,
+              "cold_spots": 51,
+              "tests": 708,
+              "min_p": 0.0002,
+              "n_at_floor": 40,
+              "n_needed": 3
+            },
+            "cold_spot_population": 30313.0,
+            "cold_spot_pop_share": 0.0199,
+            "hot_spot_pop_share": 0.2118,
+            "cold_spot_fdr_pop_share": 0.0066
+          }
+        },
+        "measures": {
+          "accpct_jobs_transit_45": {
+            "mean": 8.9258,
+            "median": 3.6,
+            "gini": 0.6215,
+            "palma": 8.018
+          },
+          "accpct_jobs_car_45": {
+            "mean": 97.1274,
+            "median": 97.41,
+            "gini": 0.0046,
+            "palma": 0.2543
+          },
+          "accpct_jobs_bike_45": {
+            "mean": 46.3409,
+            "median": 49.3,
+            "gini": 0.2547,
+            "palma": 0.7592
+          },
+          "accpct_jobs_walk_30": {
+            "mean": 2.6125,
+            "median": 1.08,
+            "gini": 0.6274,
+            "palma": 8.675
+          }
+        },
+        "deserts": {
+          "accpct_jobs_transit_45": {
+            "pop_threshold": 4184.5,
+            "access_threshold": 1.35,
+            "access_threshold_hex_quantile": 0.2675,
+            "pop_share_at_or_below_access_threshold": 0.2508,
+            "spread_ratio": 0.2063,
+            "low_spread": false,
+            "n_hexes": 24,
+            "population": 145841.0,
+            "pop_share": 0.0957,
+            "n_hexes_literal_rule": 0,
+            "n_point_mass_hexes": 0,
+            "population_by_district": {
+              "alatau": 103968.0,
+              "medeu": 15110.0,
+              "turksib": 10131.0,
+              "bostandyk": 9568.0,
+              "nauryzbay": 7064.0
+            },
+            "hexes_with_modelled_routes": 1,
+            "hexes_with_stop_pois": 19
+          },
+          "accpct_jobs_car_45": {
+            "pop_threshold": 4184.5,
+            "access_threshold": 96.87,
+            "access_threshold_hex_quantile": 94.385,
+            "pop_share_at_or_below_access_threshold": 0.2571,
+            "spread_ratio": 0.9847,
+            "low_spread": true,
+            "n_hexes": 0,
+            "population": 0.0,
+            "pop_share": 0.0,
+            "n_hexes_literal_rule": 0,
+            "n_point_mass_hexes": 0,
+            "population_by_district": {}
+          },
+          "accpct_jobs_bike_45": {
+            "pop_threshold": 4184.5,
+            "access_threshold": 30.66,
+            "access_threshold_hex_quantile": 5.7225,
+            "pop_share_at_or_below_access_threshold": 0.2504,
+            "spread_ratio": 0.3535,
+            "low_spread": false,
+            "n_hexes": 25,
+            "population": 143487.0,
+            "pop_share": 0.0942,
+            "n_hexes_literal_rule": 0,
+            "n_point_mass_hexes": 0,
+            "population_by_district": {
+              "alatau": 67392.0,
+              "turksib": 60031.0,
+              "zhetysu": 16064.0
+            }
+          },
+          "accpct_jobs_walk_30": {
+            "pop_threshold": 4184.5,
+            "access_threshold": 0.34,
+            "access_threshold_hex_quantile": 0.12,
+            "pop_share_at_or_below_access_threshold": 0.2505,
+            "spread_ratio": 0.1971,
+            "low_spread": false,
+            "n_hexes": 27,
+            "population": 166296.0,
+            "pop_share": 0.1092,
+            "n_hexes_literal_rule": 1,
+            "n_point_mass_hexes": 0,
+            "population_by_district": {
+              "alatau": 130680.0,
+              "medeu": 15110.0,
+              "bostandyk": 8854.0,
+              "nauryzbay": 7064.0,
+              "turksib": 4588.0
+            }
+          }
+        },
+        "below_cutoffs": {
+          "accpct_jobs_transit_45": {
+            "1": 0.1908,
+            "5": 0.6155,
+            "10": 0.7385,
+            "25": 0.8745
+          },
+          "accpct_jobs_car_45": {
+            "1": 0.0005,
+            "5": 0.0005,
+            "10": 0.0005,
+            "25": 0.0005
+          },
+          "accpct_jobs_bike_45": {
+            "1": 0.0024,
+            "5": 0.0176,
+            "10": 0.0518,
+            "25": 0.1939
+          },
+          "accpct_jobs_walk_30": {
+            "1": 0.4906,
+            "5": 0.8296,
+            "10": 0.9315,
+            "25": 1.0
+          }
+        },
+        "mode_gap": {
+          "modegap_transit_car_15": {
+            "median": 0.0033,
+            "pop_share_car_dependent": 0.995,
+            "pop_share_undefined": 0.0009,
+            "pop_share_transit_equals_walk": 1.0
+          },
+          "modegap_transit_car_30": {
+            "median": 0.0123,
+            "pop_share_car_dependent": 0.9903,
+            "pop_share_undefined": 0.0005,
+            "pop_share_transit_equals_walk": 0.826
+          },
+          "modegap_transit_car_45": {
+            "median": 0.037,
+            "pop_share_car_dependent": 0.8693,
+            "pop_share_undefined": 0.0005,
+            "pop_share_transit_equals_walk": 0.5049
+          },
+          "modegap_transit_car_60": {
+            "median": 0.0802,
+            "pop_share_car_dependent": 0.7115,
+            "pop_share_undefined": 0.0005,
+            "pop_share_transit_equals_walk": 0.2745
+          }
+        },
+        "transit_coverage": {
+          "pop_share_transit_equals_walk": {
+            "15": 1.0,
+            "30": 0.826,
+            "45": 0.5049,
+            "60": 0.2745
+          },
+          "pop_share_in_hexes_with_modelled_routes": 0.2906,
+          "pop_share_in_hexes_with_stop_pois_but_no_route": 0.5226,
+          "by_district_transit_equals_walk": {
+            "alatau": 0.8649,
+            "almaly": 0.0906,
+            "auezov": 0.1244,
+            "bostandyk": 0.2815,
+            "medeu": 0.3711,
+            "nauryzbay": 0.6494,
+            "turksib": 0.5664,
+            "zhetysu": 0.5561
+          },
+          "headline_walk_only": {
+            "measure": "accpct_jobs_walk_45",
+            "pop_share": 0.6537
+          }
+        },
+        "nearest": {
+          "clinic": {
+            "median_min": 12.6,
+            "p90_min": 31.8,
+            "pop_share_unreachable": 0.0005
+          },
+          "grocery": {
+            "median_min": 8.8,
+            "p90_min": 22.7,
+            "pop_share_unreachable": 0.0002
+          },
+          "kindergarten": {
+            "median_min": 17.2,
+            "p90_min": 38.5,
+            "pop_share_unreachable": 0.0006
+          },
+          "metro": {
+            "median_min": 65.6,
+            "p90_min": 120.9,
+            "pop_share_unreachable": 0.0248
+          },
+          "park": {
+            "median_min": 28.0,
+            "p90_min": 55.0,
+            "pop_share_unreachable": 0.0003
+          },
+          "school": {
+            "median_min": 13.3,
+            "p90_min": 27.7,
+            "pop_share_unreachable": 0.0002
+          }
+        },
+        "center_gradient": [
+          {
+            "band": "0-2.5 km",
+            "n_hexes": 19,
+            "population": 102941.0,
+            "pop_share": 0.0676,
+            "accpct_jobs_transit_45": 26.7566,
+            "accpct_jobs_car_45": 97.8686,
+            "accpct_jobs_bike_45": 65.7807,
+            "accpct_jobs_walk_30": 8.0441
+          },
+          {
+            "band": "2.5-5 km",
+            "n_hexes": 68,
+            "population": 271309.0,
+            "pop_share": 0.1781,
+            "accpct_jobs_transit_45": 15.1836,
+            "accpct_jobs_car_45": 97.6344,
+            "accpct_jobs_bike_45": 59.6614,
+            "accpct_jobs_walk_30": 4.4113
+          },
+          {
+            "band": "5-7.5 km",
+            "n_hexes": 104,
+            "population": 369307.0,
+            "pop_share": 0.2425,
+            "accpct_jobs_transit_45": 10.2585,
+            "accpct_jobs_car_45": 97.3467,
+            "accpct_jobs_bike_45": 54.672,
+            "accpct_jobs_walk_30": 3.0902
+          },
+          {
+            "band": "7.5-10 km",
+            "n_hexes": 129,
+            "population": 434379.0,
+            "pop_share": 0.2852,
+            "accpct_jobs_transit_45": 4.7401,
+            "accpct_jobs_car_45": 97.1698,
+            "accpct_jobs_bike_45": 41.7406,
+            "accpct_jobs_walk_30": 1.4105
+          },
+          {
+            "band": "10-15 km",
+            "n_hexes": 263,
+            "population": 315173.0,
+            "pop_share": 0.2069,
+            "accpct_jobs_transit_45": 2.7405,
+            "accpct_jobs_car_45": 96.6467,
+            "accpct_jobs_bike_45": 28.8102,
+            "accpct_jobs_walk_30": 0.6216
+          },
+          {
+            "band": ">15 km",
+            "n_hexes": 129,
+            "population": 30094.0,
+            "pop_share": 0.0198,
+            "accpct_jobs_transit_45": 0.356,
+            "accpct_jobs_car_45": 91.7516,
+            "accpct_jobs_bike_45": 7.5185,
+            "accpct_jobs_walk_30": 0.1566
+          }
+        ],
+        "center_spearman": {
+          "accpct_jobs_transit_45": -0.6837,
+          "accpct_jobs_car_45": -0.7481,
+          "accpct_jobs_bike_45": -0.7834,
+          "accpct_jobs_walk_30": -0.6174
+        }
+      },
+      "r9": {
+        "population": 1494892.0,
+        "inhabited_hexes": 3329,
+        "lisa": {
+          "accpct_jobs_walk_30": {
+            "global_moran": {
+              "I": 0.9856,
+              "expected_I": -0.0003,
+              "p_sim": 0.0001,
+              "z_sim": 85.37
+            },
+            "zero_share_hexes": 0.0048,
+            "clusters": {
+              "ns": 2180,
+              "LL": 803,
+              "HH": 341,
+              "island": 5
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 36,
+              "not_significant": 29
+            },
+            "fdr": {
+              "significant": 788,
+              "hot_spots": 271,
+              "cold_spots": 517,
+              "tests": 3324,
+              "min_p": 0.0002,
+              "n_at_floor": 277,
+              "n_needed": 14
+            },
+            "cold_spot_population": 52148.0,
+            "cold_spot_pop_share": 0.0349,
+            "hot_spot_pop_share": 0.1787,
+            "cold_spot_fdr_pop_share": 0.0114
+          },
+          "sfca_schools_walk": {
+            "global_moran": {
+              "I": 0.4966,
+              "expected_I": -0.0003,
+              "p_sim": 0.0001,
+              "z_sim": 42.54
+            },
+            "zero_share_hexes": 0.5894,
+            "clusters": {
+              "ns": 3142,
+              "HH": 168,
+              "LH": 14,
+              "island": 5
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 20,
+              "not_significant": 23
+            },
+            "fdr": {
+              "significant": null,
+              "hot_spots": null,
+              "cold_spots": null,
+              "tests": 3324,
+              "min_p": 0.0002,
+              "n_at_floor": 8,
+              "n_needed": 14
+            },
+            "cold_spot_population": 0.0,
+            "cold_spot_pop_share": 0.0,
+            "hot_spot_pop_share": 0.0324,
+            "cold_spot_fdr_pop_share": 0.0
+          },
+          "sfca_kindergartens_walk": {
+            "global_moran": {
+              "I": 0.7662,
+              "expected_I": -0.0003,
+              "p_sim": 0.0001,
+              "z_sim": 66.46
+            },
+            "zero_share_hexes": 0.6723,
+            "clusters": {
+              "ns": 3062,
+              "HH": 240,
+              "LH": 22,
+              "island": 5
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 15,
+              "not_significant": 9
+            },
+            "fdr": {
+              "significant": 100,
+              "hot_spots": 94,
+              "cold_spots": 0,
+              "tests": 3324,
+              "min_p": 0.0002,
+              "n_at_floor": 79,
+              "n_needed": 14
+            },
+            "cold_spot_population": 0.0,
+            "cold_spot_pop_share": 0.0,
+            "hot_spot_pop_share": 0.0562,
+            "cold_spot_fdr_pop_share": 0.0
+          },
+          "sfca_clinics_walk": {
+            "global_moran": {
+              "I": 0.4406,
+              "expected_I": -0.0003,
+              "p_sim": 0.0001,
+              "z_sim": 39.11
+            },
+            "zero_share_hexes": 0.6182,
+            "clusters": {
+              "ns": 3075,
+              "HH": 219,
+              "LH": 30,
+              "island": 5
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 122,
+              "not_significant": 61
+            },
+            "fdr": {
+              "significant": null,
+              "hot_spots": null,
+              "cold_spots": null,
+              "tests": 3324,
+              "min_p": 0.0002,
+              "n_at_floor": 4,
+              "n_needed": 14
+            },
+            "cold_spot_population": 0.0,
+            "cold_spot_pop_share": 0.0,
+            "hot_spot_pop_share": 0.0828,
+            "cold_spot_fdr_pop_share": 0.0
+          }
+        },
+        "measures": {
+          "accpct_jobs_walk_30": {
+            "mean": 2.746,
+            "median": 1.22,
+            "gini": 0.601,
+            "palma": 6.2062
+          },
+          "sfca_schools_walk": {
+            "mean": 0.1844,
+            "median": 0.0956,
+            "gini": 0.6524,
+            "palma": 42.4998
+          },
+          "sfca_kindergartens_walk": {
+            "mean": 0.1455,
+            "median": 0.0,
+            "gini": 0.733,
+            "palma": "inf"
+          },
+          "sfca_clinics_walk": {
+            "mean": 0.3519,
+            "median": 0.0835,
+            "gini": 0.7319,
+            "palma": "inf"
+          }
+        },
+        "deserts": {
+          "accpct_jobs_walk_30": {
+            "pop_threshold": 658.7,
+            "access_threshold": 0.53,
+            "access_threshold_hex_quantile": 0.2,
+            "pop_share_at_or_below_access_threshold": 0.2511,
+            "spread_ratio": 0.274,
+            "low_spread": false,
+            "n_hexes": 183,
+            "population": 220897.0,
+            "pop_share": 0.1478,
+            "n_hexes_literal_rule": 10,
+            "n_point_mass_hexes": 8,
+            "population_by_district": {
+              "alatau": 138959.0,
+              "nauryzbay": 30424.0,
+              "medeu": 21833.0,
+              "turksib": 18375.0,
+              "bostandyk": 10574.0,
+              "zhetysu": 733.0
+            }
+          },
+          "sfca_schools_walk": {
+            "pop_threshold": 658.7,
+            "access_threshold": 0.0,
+            "access_threshold_hex_quantile": 0.0,
+            "pop_share_at_or_below_access_threshold": 0.3645,
+            "spread_ratio": 0.0,
+            "low_spread": false,
+            "n_hexes": 269,
+            "population": 346497.0,
+            "pop_share": 0.2318,
+            "n_hexes_literal_rule": 269,
+            "n_point_mass_hexes": 7,
+            "population_by_district": {
+              "alatau": 115596.0,
+              "zhetysu": 59306.0,
+              "turksib": 51250.0,
+              "bostandyk": 39723.0,
+              "medeu": 38523.0,
+              "nauryzbay": 35350.0,
+              "almaly": 4224.0,
+              "auezov": 2524.0
+            }
+          },
+          "sfca_kindergartens_walk": {
+            "pop_threshold": 658.7,
+            "access_threshold": 0.0,
+            "access_threshold_hex_quantile": 0.0,
+            "pop_share_at_or_below_access_threshold": 0.518,
+            "spread_ratio": 0.0,
+            "low_spread": false,
+            "n_hexes": 415,
+            "population": 537188.0,
+            "pop_share": 0.3593,
+            "n_hexes_literal_rule": 415,
+            "n_point_mass_hexes": 7,
+            "population_by_district": {
+              "alatau": 176832.0,
+              "medeu": 102430.0,
+              "zhetysu": 83742.0,
+              "turksib": 79009.0,
+              "bostandyk": 51755.0,
+              "nauryzbay": 29917.0,
+              "auezov": 8514.0,
+              "almaly": 4990.0
+            }
+          },
+          "sfca_clinics_walk": {
+            "pop_threshold": 658.7,
+            "access_threshold": 0.0,
+            "access_threshold_hex_quantile": 0.0,
+            "pop_share_at_or_below_access_threshold": 0.4123,
+            "spread_ratio": 0.0,
+            "low_spread": false,
+            "n_hexes": 299,
+            "population": 395646.0,
+            "pop_share": 0.2647,
+            "n_hexes_literal_rule": 299,
+            "n_point_mass_hexes": 7,
+            "population_by_district": {
+              "alatau": 112515.0,
+              "zhetysu": 84002.0,
+              "turksib": 75242.0,
+              "medeu": 52547.0,
+              "bostandyk": 38120.0,
+              "nauryzbay": 29666.0,
+              "auezov": 2658.0,
+              "almaly": 896.0
+            }
+          }
+        },
+        "below_cutoffs": {
+          "accpct_jobs_walk_30": {
+            "1": 0.4337,
+            "5": 0.8262,
+            "10": 0.9211,
+            "25": 1.0
+          }
+        },
+        "nearest": {
+          "clinic": {
+            "median_min": 12.3,
+            "p90_min": 31.1,
+            "pop_share_unreachable": 0.0005
+          },
+          "grocery": {
+            "median_min": 7.7,
+            "p90_min": 21.6,
+            "pop_share_unreachable": 0.0002
+          },
+          "kindergarten": {
+            "median_min": 16.0,
+            "p90_min": 36.4,
+            "pop_share_unreachable": 0.0006
+          },
+          "metro": {
+            "median_min": 64.6,
+            "p90_min": 119.5,
+            "pop_share_unreachable": 0.0206
+          },
+          "park": {
+            "median_min": 26.6,
+            "p90_min": 53.7,
+            "pop_share_unreachable": 0.0002
+          },
+          "school": {
+            "median_min": 12.2,
+            "p90_min": 26.5,
+            "pop_share_unreachable": 0.0002
+          }
+        },
+        "center_gradient": [
+          {
+            "band": "0-2.5 km",
+            "n_hexes": 134,
+            "population": 116537.0,
+            "pop_share": 0.078,
+            "accpct_jobs_walk_30": 8.2592,
+            "sfca_schools_walk": 0.2816,
+            "sfca_kindergartens_walk": 0.2091,
+            "sfca_clinics_walk": 0.9644
+          },
+          {
+            "band": "2.5-5 km",
+            "n_hexes": 354,
+            "population": 260555.0,
+            "pop_share": 0.1743,
+            "accpct_jobs_walk_30": 4.5883,
+            "sfca_schools_walk": 0.1898,
+            "sfca_kindergartens_walk": 0.1343,
+            "sfca_clinics_walk": 0.5014
+          },
+          {
+            "band": "5-7.5 km",
+            "n_hexes": 541,
+            "population": 362434.0,
+            "pop_share": 0.2424,
+            "accpct_jobs_walk_30": 2.9913,
+            "sfca_schools_walk": 0.1574,
+            "sfca_kindergartens_walk": 0.1614,
+            "sfca_clinics_walk": 0.335
+          },
+          {
+            "band": "7.5-10 km",
+            "n_hexes": 703,
+            "population": 441342.0,
+            "pop_share": 0.2952,
+            "accpct_jobs_walk_30": 1.4186,
+            "sfca_schools_walk": 0.1641,
+            "sfca_kindergartens_walk": 0.1196,
+            "sfca_clinics_walk": 0.2045
+          },
+          {
+            "band": "10-15 km",
+            "n_hexes": 1185,
+            "population": 293135.0,
+            "pop_share": 0.1961,
+            "accpct_jobs_walk_30": 0.791,
+            "sfca_schools_walk": 0.205,
+            "sfca_kindergartens_walk": 0.1486,
+            "sfca_clinics_walk": 0.2305
+          },
+          {
+            "band": ">15 km",
+            "n_hexes": 412,
+            "population": 20889.0,
+            "pop_share": 0.014,
+            "accpct_jobs_walk_30": 0.2316,
+            "sfca_schools_walk": 0.1844,
+            "sfca_kindergartens_walk": 0.1577,
+            "sfca_clinics_walk": 0.1847
+          }
+        ],
+        "center_spearman": {
+          "accpct_jobs_walk_30": -0.668,
+          "sfca_schools_walk": -0.3266,
+          "sfca_kindergartens_walk": -0.3148,
+          "sfca_clinics_walk": -0.4063
+        }
+      }
+    },
+    "calibrated": {
+      "r8": {
+        "population": 1523203.0,
+        "inhabited_hexes": 712,
+        "lisa": {
+          "accpct_jobs_transit_45": {
+            "global_moran": {
+              "I": 0.9038,
+              "expected_I": -0.0014,
+              "p_sim": 0.0001,
+              "z_sim": 37.8
+            },
+            "zero_share_hexes": 0.0,
+            "clusters": {
+              "ns": 473,
+              "LL": 157,
+              "HH": 78,
+              "island": 4
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 9,
+              "not_significant": 4
+            },
+            "fdr": {
+              "significant": 134,
+              "hot_spots": 63,
+              "cold_spots": 71,
+              "tests": 708,
+              "min_p": 0.0002,
+              "n_at_floor": 35,
+              "n_needed": 3
+            },
+            "cold_spot_population": 29047.0,
+            "cold_spot_pop_share": 0.0191,
+            "hot_spot_pop_share": 0.3394,
+            "cold_spot_fdr_pop_share": 0.0067
+          },
+          "accpct_jobs_car_45": {
+            "global_moran": {
+              "I": 0.8353,
+              "expected_I": -0.0014,
+              "p_sim": 0.0001,
+              "z_sim": 34.64
+            },
+            "zero_share_hexes": 0.0365,
+            "clusters": {
+              "ns": 475,
+              "HH": 198,
+              "LL": 35,
+              "island": 4
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 3,
+              "not_significant": 5
+            },
+            "fdr": {
+              "significant": 199,
+              "hot_spots": 169,
+              "cold_spots": 30,
+              "tests": 708,
+              "min_p": 0.0002,
+              "n_at_floor": 56,
+              "n_needed": 3
+            },
+            "cold_spot_population": 806.0,
+            "cold_spot_pop_share": 0.0005,
+            "hot_spot_pop_share": 0.658,
+            "cold_spot_fdr_pop_share": 0.0005
+          },
+          "accpct_jobs_bike_45": {
+            "global_moran": {
+              "I": 0.9582,
+              "expected_I": -0.0014,
+              "p_sim": 0.0001,
+              "z_sim": 39.52
+            },
+            "zero_share_hexes": 0.0,
+            "clusters": {
+              "ns": 352,
+              "LL": 183,
+              "HH": 173,
+              "island": 4
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 7,
+              "not_significant": 10
+            },
+            "fdr": {
+              "significant": 283,
+              "hot_spots": 155,
+              "cold_spots": 128,
+              "tests": 708,
+              "min_p": 0.0002,
+              "n_at_floor": 93,
+              "n_needed": 3
+            },
+            "cold_spot_population": 38615.0,
+            "cold_spot_pop_share": 0.0254,
+            "hot_spot_pop_share": 0.6051,
+            "cold_spot_fdr_pop_share": 0.0112
+          },
+          "accpct_jobs_walk_30": {
+            "global_moran": {
+              "I": 0.9213,
+              "expected_I": -0.0014,
+              "p_sim": 0.0001,
+              "z_sim": 38.58
+            },
+            "zero_share_hexes": 0.0028,
+            "clusters": {
+              "ns": 514,
+              "LL": 124,
+              "HH": 70,
+              "island": 4
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 12,
+              "not_significant": 7
+            },
+            "fdr": {
+              "significant": 103,
+              "hot_spots": 52,
+              "cold_spots": 51,
+              "tests": 708,
+              "min_p": 0.0002,
+              "n_at_floor": 40,
+              "n_needed": 3
+            },
+            "cold_spot_population": 30817.0,
+            "cold_spot_pop_share": 0.0202,
+            "hot_spot_pop_share": 0.2782,
+            "cold_spot_fdr_pop_share": 0.0064
+          }
+        },
+        "measures": {
+          "accpct_jobs_transit_45": {
+            "mean": 11.1789,
+            "median": 4.63,
+            "gini": 0.5875,
+            "palma": 7.0092
+          },
+          "accpct_jobs_car_45": {
+            "mean": 97.2334,
+            "median": 97.52,
+            "gini": 0.0041,
+            "palma": 0.2538
+          },
+          "accpct_jobs_bike_45": {
+            "mean": 50.0455,
+            "median": 55.34,
+            "gini": 0.2267,
+            "palma": 0.6501
+          },
+          "accpct_jobs_walk_30": {
+            "mean": 3.203,
+            "median": 1.47,
+            "gini": 0.599,
+            "palma": 7.9287
+          }
+        },
+        "deserts": {
+          "accpct_jobs_transit_45": {
+            "pop_threshold": 3546.2,
+            "access_threshold": 1.63,
+            "access_threshold_hex_quantile": 0.2675,
+            "pop_share_at_or_below_access_threshold": 0.2505,
+            "spread_ratio": 0.18,
+            "low_spread": false,
+            "n_hexes": 33,
+            "population": 164802.0,
+            "pop_share": 0.1082,
+            "n_hexes_literal_rule": 0,
+            "n_point_mass_hexes": 0,
+            "population_by_district": {
+              "alatau": 97357.0,
+              "bostandyk": 33178.0,
+              "nauryzbay": 18623.0,
+              "medeu": 7898.0,
+              "turksib": 7747.0
+            },
+            "hexes_with_modelled_routes": 1,
+            "hexes_with_stop_pois": 24
+          },
+          "accpct_jobs_car_45": {
+            "pop_threshold": 3546.2,
+            "access_threshold": 97.02,
+            "access_threshold_hex_quantile": 94.385,
+            "pop_share_at_or_below_access_threshold": 0.2538,
+            "spread_ratio": 0.9855,
+            "low_spread": true,
+            "n_hexes": 0,
+            "population": 0.0,
+            "pop_share": 0.0,
+            "n_hexes_literal_rule": 0,
+            "n_point_mass_hexes": 0,
+            "population_by_district": {}
+          },
+          "accpct_jobs_bike_45": {
+            "pop_threshold": 3546.2,
+            "access_threshold": 35.24,
+            "access_threshold_hex_quantile": 5.7225,
+            "pop_share_at_or_below_access_threshold": 0.2523,
+            "spread_ratio": 0.3732,
+            "low_spread": false,
+            "n_hexes": 26,
+            "population": 119982.0,
+            "pop_share": 0.0788,
+            "n_hexes_literal_rule": 0,
+            "n_point_mass_hexes": 0,
+            "population_by_district": {
+              "alatau": 75517.0,
+              "turksib": 35146.0,
+              "zhetysu": 9319.0
+            }
+          },
+          "accpct_jobs_walk_30": {
+            "pop_threshold": 3546.2,
+            "access_threshold": 0.45,
+            "access_threshold_hex_quantile": 0.12,
+            "pop_share_at_or_below_access_threshold": 0.2534,
+            "spread_ratio": 0.1613,
+            "low_spread": false,
+            "n_hexes": 32,
+            "population": 163628.0,
+            "pop_share": 0.1074,
+            "n_hexes_literal_rule": 1,
+            "n_point_mass_hexes": 0,
+            "population_by_district": {
+              "alatau": 113498.0,
+              "bostandyk": 28218.0,
+              "nauryzbay": 14014.0,
+              "medeu": 7898.0
+            }
+          }
+        },
+        "below_cutoffs": {
+          "accpct_jobs_transit_45": {
+            "1": 0.1659,
+            "5": 0.5148,
+            "10": 0.6507,
+            "25": 0.8326
+          },
+          "accpct_jobs_car_45": {
+            "1": 0.0004,
+            "5": 0.0005,
+            "10": 0.0005,
+            "25": 0.0005
+          },
+          "accpct_jobs_bike_45": {
+            "1": 0.0018,
+            "5": 0.0138,
+            "10": 0.0406,
+            "25": 0.153
+          },
+          "accpct_jobs_walk_30": {
+            "1": 0.4197,
+            "5": 0.7872,
+            "10": 0.9065,
+            "25": 1.0
+          }
+        },
+        "mode_gap": {
+          "modegap_transit_car_15": {
+            "median": 0.0037,
+            "pop_share_car_dependent": 0.9962,
+            "pop_share_undefined": 0.0008,
+            "pop_share_transit_equals_walk": 1.0
+          },
+          "modegap_transit_car_30": {
+            "median": 0.0163,
+            "pop_share_car_dependent": 0.988,
+            "pop_share_undefined": 0.0004,
+            "pop_share_transit_equals_walk": 0.8002
+          },
+          "modegap_transit_car_45": {
+            "median": 0.0477,
+            "pop_share_car_dependent": 0.8229,
+            "pop_share_undefined": 0.0004,
+            "pop_share_transit_equals_walk": 0.4349
+          },
+          "modegap_transit_car_60": {
+            "median": 0.1469,
+            "pop_share_car_dependent": 0.624,
+            "pop_share_undefined": 0.0004,
+            "pop_share_transit_equals_walk": 0.2293
+          }
+        },
+        "transit_coverage": {
+          "pop_share_transit_equals_walk": {
+            "15": 1.0,
+            "30": 0.8002,
+            "45": 0.4349,
+            "60": 0.2293
+          },
+          "pop_share_in_hexes_with_modelled_routes": 0.3458,
+          "pop_share_in_hexes_with_stop_pois_but_no_route": 0.4957,
+          "by_district_transit_equals_walk": {
+            "alatau": 0.8649,
+            "almaly": 0.0906,
+            "auezov": 0.1244,
+            "bostandyk": 0.2815,
+            "medeu": 0.3711,
+            "nauryzbay": 0.6494,
+            "turksib": 0.5664,
+            "zhetysu": 0.5561
+          },
+          "headline_walk_only": {
+            "measure": "accpct_jobs_walk_45",
+            "pop_share": 0.5452
+          }
+        },
+        "nearest": {
+          "clinic": {
+            "median_min": 11.5,
+            "p90_min": 29.9,
+            "pop_share_unreachable": 0.0005
+          },
+          "grocery": {
+            "median_min": 7.9,
+            "p90_min": 21.2,
+            "pop_share_unreachable": 0.0003
+          },
+          "kindergarten": {
+            "median_min": 14.4,
+            "p90_min": 34.9,
+            "pop_share_unreachable": 0.0005
+          },
+          "metro": {
+            "median_min": 53.4,
+            "p90_min": 113.8,
+            "pop_share_unreachable": 0.0183
+          },
+          "park": {
+            "median_min": 26.9,
+            "p90_min": 52.2,
+            "pop_share_unreachable": 0.0003
+          },
+          "school": {
+            "median_min": 12.1,
+            "p90_min": 26.3,
+            "pop_share_unreachable": 0.0003
+          }
+        },
+        "center_gradient": [
+          {
+            "band": "0-2.5 km",
+            "n_hexes": 19,
+            "population": 95859.0,
+            "pop_share": 0.0629,
+            "accpct_jobs_transit_45": 28.228,
+            "accpct_jobs_car_45": 97.8783,
+            "accpct_jobs_bike_45": 67.3186,
+            "accpct_jobs_walk_30": 9.1142
+          },
+          {
+            "band": "2.5-5 km",
+            "n_hexes": 68,
+            "population": 246312.0,
+            "pop_share": 0.1617,
+            "accpct_jobs_transit_45": 19.0517,
+            "accpct_jobs_car_45": 97.6889,
+            "accpct_jobs_bike_45": 62.6314,
+            "accpct_jobs_walk_30": 5.8329
+          },
+          {
+            "band": "5-7.5 km",
+            "n_hexes": 104,
+            "population": 333771.0,
+            "pop_share": 0.2191,
+            "accpct_jobs_transit_45": 13.2682,
+            "accpct_jobs_car_45": 97.4324,
+            "accpct_jobs_bike_45": 58.2085,
+            "accpct_jobs_walk_30": 3.9024
+          },
+          {
+            "band": "7.5-10 km",
+            "n_hexes": 129,
+            "population": 461340.0,
+            "pop_share": 0.3029,
+            "accpct_jobs_transit_45": 7.7149,
+            "accpct_jobs_car_45": 97.303,
+            "accpct_jobs_bike_45": 48.2959,
+            "accpct_jobs_walk_30": 2.0659
+          },
+          {
+            "band": "10-15 km",
+            "n_hexes": 263,
+            "population": 354384.0,
+            "pop_share": 0.2327,
+            "accpct_jobs_transit_45": 4.5994,
+            "accpct_jobs_car_45": 96.8875,
+            "accpct_jobs_bike_45": 34.8997,
+            "accpct_jobs_walk_30": 0.8684
+          },
+          {
+            "band": ">15 km",
+            "n_hexes": 129,
+            "population": 31538.0,
+            "pop_share": 0.0207,
+            "accpct_jobs_transit_45": 0.3663,
+            "accpct_jobs_car_45": 92.4791,
+            "accpct_jobs_bike_45": 8.6438,
+            "accpct_jobs_walk_30": 0.1592
+          }
+        ],
+        "center_spearman": {
+          "accpct_jobs_transit_45": -0.6837,
+          "accpct_jobs_car_45": -0.7481,
+          "accpct_jobs_bike_45": -0.7834,
+          "accpct_jobs_walk_30": -0.6174
+        }
+      },
+      "r9": {
+        "population": 1494892.0,
+        "inhabited_hexes": 3329,
+        "lisa": {
+          "accpct_jobs_walk_30": {
+            "global_moran": {
+              "I": 0.9856,
+              "expected_I": -0.0003,
+              "p_sim": 0.0001,
+              "z_sim": 85.37
+            },
+            "zero_share_hexes": 0.0048,
+            "clusters": {
+              "ns": 2180,
+              "LL": 803,
+              "HH": 341,
+              "island": 5
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 36,
+              "not_significant": 29
+            },
+            "fdr": {
+              "significant": 788,
+              "hot_spots": 271,
+              "cold_spots": 517,
+              "tests": 3324,
+              "min_p": 0.0002,
+              "n_at_floor": 277,
+              "n_needed": 14
+            },
+            "cold_spot_population": 45153.0,
+            "cold_spot_pop_share": 0.0302,
+            "hot_spot_pop_share": 0.2279,
+            "cold_spot_fdr_pop_share": 0.0104
+          },
+          "sfca_schools_walk": {
+            "global_moran": {
+              "I": 0.3947,
+              "expected_I": -0.0003,
+              "p_sim": 0.0001,
+              "z_sim": 34.24
+            },
+            "zero_share_hexes": 0.5894,
+            "clusters": {
+              "ns": 3172,
+              "HH": 130,
+              "LH": 22,
+              "island": 5
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 13,
+              "not_significant": 12
+            },
+            "fdr": {
+              "significant": null,
+              "hot_spots": null,
+              "cold_spots": null,
+              "tests": 3324,
+              "min_p": 0.0002,
+              "n_at_floor": 3,
+              "n_needed": 14
+            },
+            "cold_spot_population": 0.0,
+            "cold_spot_pop_share": 0.0,
+            "hot_spot_pop_share": 0.0251,
+            "cold_spot_fdr_pop_share": 0.0
+          },
+          "sfca_kindergartens_walk": {
+            "global_moran": {
+              "I": 0.7195,
+              "expected_I": -0.0003,
+              "p_sim": 0.0001,
+              "z_sim": 62.12
+            },
+            "zero_share_hexes": 0.6723,
+            "clusters": {
+              "ns": 3116,
+              "HH": 182,
+              "LH": 26,
+              "island": 5
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 12,
+              "not_significant": 14
+            },
+            "fdr": {
+              "significant": 76,
+              "hot_spots": 68,
+              "cold_spots": 0,
+              "tests": 3324,
+              "min_p": 0.0002,
+              "n_at_floor": 53,
+              "n_needed": 14
+            },
+            "cold_spot_population": 0.0,
+            "cold_spot_pop_share": 0.0,
+            "hot_spot_pop_share": 0.0369,
+            "cold_spot_fdr_pop_share": 0.0
+          },
+          "sfca_clinics_walk": {
+            "global_moran": {
+              "I": 0.3847,
+              "expected_I": -0.0003,
+              "p_sim": 0.0001,
+              "z_sim": 34.42
+            },
+            "zero_share_hexes": 0.6182,
+            "clusters": {
+              "ns": 3060,
+              "HH": 231,
+              "LH": 33,
+              "island": 5
+            },
+            "borderline": {
+              "p_band": [
+                0.0438,
+                0.0562
+              ],
+              "significant": 158,
+              "not_significant": 77
+            },
+            "fdr": {
+              "significant": null,
+              "hot_spots": null,
+              "cold_spots": null,
+              "tests": 3324,
+              "min_p": 0.0002,
+              "n_at_floor": 4,
+              "n_needed": 14
+            },
+            "cold_spot_population": 0.0,
+            "cold_spot_pop_share": 0.0,
+            "hot_spot_pop_share": 0.1018,
+            "cold_spot_fdr_pop_share": 0.0
+          }
+        },
+        "measures": {
+          "accpct_jobs_walk_30": {
+            "mean": 3.3423,
+            "median": 1.49,
+            "gini": 0.5835,
+            "palma": 6.1984
+          },
+          "sfca_schools_walk": {
+            "mean": 0.1843,
+            "median": 0.1175,
+            "gini": 0.6059,
+            "palma": 18.8941
+          },
+          "sfca_kindergartens_walk": {
+            "mean": 0.1454,
+            "median": 0.0598,
+            "gini": 0.6929,
+            "palma": "inf"
+          },
+          "sfca_clinics_walk": {
+            "mean": 0.352,
+            "median": 0.1314,
+            "gini": 0.6774,
+            "palma": 60.8261
+          }
+        },
+        "deserts": {
+          "accpct_jobs_walk_30": {
+            "pop_threshold": 648.0,
+            "access_threshold": 0.6,
+            "access_threshold_hex_quantile": 0.2,
+            "pop_share_at_or_below_access_threshold": 0.2503,
+            "spread_ratio": 0.238,
+            "low_spread": false,
+            "n_hexes": 178,
+            "population": 206989.0,
+            "pop_share": 0.1385,
+            "n_hexes_literal_rule": 12,
+            "n_point_mass_hexes": 8,
+            "population_by_district": {
+              "alatau": 103182.0,
+              "nauryzbay": 59329.0,
+              "medeu": 19526.0,
+              "bostandyk": 16015.0,
+              "turksib": 8107.0,
+              "zhetysu": 830.0
+            }
+          },
+          "sfca_schools_walk": {
+            "pop_threshold": 648.0,
+            "access_threshold": 0.0,
+            "access_threshold_hex_quantile": 0.0,
+            "pop_share_at_or_below_access_threshold": 0.3245,
+            "spread_ratio": 0.0,
+            "low_spread": false,
+            "n_hexes": 230,
+            "population": 289812.0,
+            "pop_share": 0.1939,
+            "n_hexes_literal_rule": 230,
+            "n_point_mass_hexes": 7,
+            "population_by_district": {
+              "alatau": 81357.0,
+              "nauryzbay": 61422.0,
+              "bostandyk": 46916.0,
+              "zhetysu": 32473.0,
+              "medeu": 26060.0,
+              "turksib": 22810.0,
+              "auezov": 11748.0,
+              "almaly": 7025.0
+            }
+          },
+          "sfca_kindergartens_walk": {
+            "pop_threshold": 648.0,
+            "access_threshold": 0.0,
+            "access_threshold_hex_quantile": 0.0,
+            "pop_share_at_or_below_access_threshold": 0.4533,
+            "spread_ratio": 0.0,
+            "low_spread": false,
+            "n_hexes": 360,
+            "population": 437136.0,
+            "pop_share": 0.2924,
+            "n_hexes_literal_rule": 360,
+            "n_point_mass_hexes": 7,
+            "population_by_district": {
+              "alatau": 129633.0,
+              "medeu": 66910.0,
+              "bostandyk": 61926.0,
+              "nauryzbay": 56829.0,
+              "zhetysu": 49841.0,
+              "turksib": 36867.0,
+              "auezov": 26831.0,
+              "almaly": 8299.0
+            }
+          },
+          "sfca_clinics_walk": {
+            "pop_threshold": 648.0,
+            "access_threshold": 0.0,
+            "access_threshold_hex_quantile": 0.0,
+            "pop_share_at_or_below_access_threshold": 0.3528,
+            "spread_ratio": 0.0,
+            "low_spread": false,
+            "n_hexes": 247,
+            "population": 307367.0,
+            "pop_share": 0.2056,
+            "n_hexes_literal_rule": 247,
+            "n_point_mass_hexes": 7,
+            "population_by_district": {
+              "alatau": 77638.0,
+              "nauryzbay": 52535.0,
+              "zhetysu": 50535.0,
+              "bostandyk": 47238.0,
+              "turksib": 36734.0,
+              "medeu": 34117.0,
+              "auezov": 7081.0,
+              "almaly": 1490.0
+            }
+          }
+        },
+        "below_cutoffs": {
+          "accpct_jobs_walk_30": {
+            "1": 0.381,
+            "5": 0.7797,
+            "10": 0.8939,
+            "25": 1.0
+          }
+        },
+        "nearest": {
+          "clinic": {
+            "median_min": 10.5,
+            "p90_min": 29.2,
+            "pop_share_unreachable": 0.0004
+          },
+          "grocery": {
+            "median_min": 6.7,
+            "p90_min": 20.4,
+            "pop_share_unreachable": 0.0002
+          },
+          "kindergarten": {
+            "median_min": 13.4,
+            "p90_min": 34.3,
+            "pop_share_unreachable": 0.0005
+          },
+          "metro": {
+            "median_min": 52.4,
+            "p90_min": 112.3,
+            "pop_share_unreachable": 0.0149
+          },
+          "park": {
+            "median_min": 26.2,
+            "p90_min": 51.3,
+            "pop_share_unreachable": 0.0002
+          },
+          "school": {
+            "median_min": 11.3,
+            "p90_min": 25.6,
+            "pop_share_unreachable": 0.0002
+          }
+        },
+        "center_gradient": [
+          {
+            "band": "0-2.5 km",
+            "n_hexes": 134,
+            "population": 114262.0,
+            "pop_share": 0.0764,
+            "accpct_jobs_walk_30": 9.431,
+            "sfca_schools_walk": 0.2887,
+            "sfca_kindergartens_walk": 0.215,
+            "sfca_clinics_walk": 0.9921
+          },
+          {
+            "band": "2.5-5 km",
+            "n_hexes": 354,
+            "population": 239613.0,
+            "pop_share": 0.1603,
+            "accpct_jobs_walk_30": 6.1061,
+            "sfca_schools_walk": 0.2075,
+            "sfca_kindergartens_walk": 0.1465,
+            "sfca_clinics_walk": 0.5445
+          },
+          {
+            "band": "5-7.5 km",
+            "n_hexes": 541,
+            "population": 329056.0,
+            "pop_share": 0.2201,
+            "accpct_jobs_walk_30": 3.7343,
+            "sfca_schools_walk": 0.1709,
+            "sfca_kindergartens_walk": 0.1757,
+            "sfca_clinics_walk": 0.3649
+          },
+          {
+            "band": "7.5-10 km",
+            "n_hexes": 703,
+            "population": 446152.0,
+            "pop_share": 0.2985,
+            "accpct_jobs_walk_30": 1.9559,
+            "sfca_schools_walk": 0.163,
+            "sfca_kindergartens_walk": 0.1192,
+            "sfca_clinics_walk": 0.2035
+          },
+          {
+            "band": "10-15 km",
+            "n_hexes": 1185,
+            "population": 342725.0,
+            "pop_share": 0.2293,
+            "accpct_jobs_walk_30": 1.0188,
+            "sfca_schools_walk": 0.1751,
+            "sfca_kindergartens_walk": 0.1268,
+            "sfca_clinics_walk": 0.1971
+          },
+          {
+            "band": ">15 km",
+            "n_hexes": 412,
+            "population": 23085.0,
+            "pop_share": 0.0154,
+            "accpct_jobs_walk_30": 0.222,
+            "sfca_schools_walk": 0.1669,
+            "sfca_kindergartens_walk": 0.1421,
+            "sfca_clinics_walk": 0.172
+          }
+        ],
+        "center_spearman": {
+          "accpct_jobs_walk_30": -0.668,
+          "sfca_schools_walk": -0.3344,
+          "sfca_kindergartens_walk": -0.3197,
+          "sfca_clinics_walk": -0.4147
+        }
+      }
+    }
+  },
+  "comparison": {
+    "r8": {
+      "accpct_jobs_transit_45": {
+        "mean": {
+          "raster": 8.9258,
+          "calibrated": 11.1789
+        },
+        "median": {
+          "raster": 3.6,
+          "calibrated": 4.63
+        },
+        "gini": {
+          "raster": 0.6215,
+          "calibrated": 0.5875
+        },
+        "palma": {
+          "raster": 8.018,
+          "calibrated": 7.0092
+        },
+        "below_cutoffs": {
+          "1": {
+            "raster": 0.1908,
+            "calibrated": 0.1659
+          },
+          "5": {
+            "raster": 0.6155,
+            "calibrated": 0.5148
+          },
+          "10": {
+            "raster": 0.7385,
+            "calibrated": 0.6507
+          },
+          "25": {
+            "raster": 0.8745,
+            "calibrated": 0.8326
+          }
+        },
+        "deserts": {
+          "raster": 24,
+          "calibrated": 33,
+          "both": 21,
+          "raster_only": 3,
+          "calibrated_only": 12,
+          "same_top_hex": false
+        },
+        "hot_spot_hexes": {
+          "raster": 78,
+          "calibrated": 78,
+          "both": 78
+        },
+        "district_ranks_changed": {}
+      },
+      "accpct_jobs_car_45": {
+        "mean": {
+          "raster": 97.1274,
+          "calibrated": 97.2334
+        },
+        "median": {
+          "raster": 97.41,
+          "calibrated": 97.52
+        },
+        "gini": {
+          "raster": 0.0046,
+          "calibrated": 0.0041
+        },
+        "palma": {
+          "raster": 0.2543,
+          "calibrated": 0.2538
+        },
+        "below_cutoffs": {
+          "1": {
+            "raster": 0.0005,
+            "calibrated": 0.0004
+          },
+          "5": {
+            "raster": 0.0005,
+            "calibrated": 0.0005
+          },
+          "10": {
+            "raster": 0.0005,
+            "calibrated": 0.0005
+          },
+          "25": {
+            "raster": 0.0005,
+            "calibrated": 0.0005
+          }
+        },
+        "deserts": {
+          "raster": 0,
+          "calibrated": 0,
+          "both": 0,
+          "raster_only": 0,
+          "calibrated_only": 0,
+          "same_top_hex": false
+        },
+        "hot_spot_hexes": {
+          "raster": 198,
+          "calibrated": 198,
+          "both": 198
+        },
+        "district_ranks_changed": {}
+      },
+      "accpct_jobs_bike_45": {
+        "mean": {
+          "raster": 46.3409,
+          "calibrated": 50.0455
+        },
+        "median": {
+          "raster": 49.3,
+          "calibrated": 55.34
+        },
+        "gini": {
+          "raster": 0.2547,
+          "calibrated": 0.2267
+        },
+        "palma": {
+          "raster": 0.7592,
+          "calibrated": 0.6501
+        },
+        "below_cutoffs": {
+          "1": {
+            "raster": 0.0024,
+            "calibrated": 0.0018
+          },
+          "5": {
+            "raster": 0.0176,
+            "calibrated": 0.0138
+          },
+          "10": {
+            "raster": 0.0518,
+            "calibrated": 0.0406
+          },
+          "25": {
+            "raster": 0.1939,
+            "calibrated": 0.153
+          }
+        },
+        "deserts": {
+          "raster": 25,
+          "calibrated": 26,
+          "both": 17,
+          "raster_only": 8,
+          "calibrated_only": 9,
+          "same_top_hex": true
+        },
+        "hot_spot_hexes": {
+          "raster": 173,
+          "calibrated": 173,
+          "both": 173
+        },
+        "district_ranks_changed": {}
+      },
+      "accpct_jobs_walk_30": {
+        "mean": {
+          "raster": 2.6125,
+          "calibrated": 3.203
+        },
+        "median": {
+          "raster": 1.08,
+          "calibrated": 1.47
+        },
+        "gini": {
+          "raster": 0.6274,
+          "calibrated": 0.599
+        },
+        "palma": {
+          "raster": 8.675,
+          "calibrated": 7.9287
+        },
+        "below_cutoffs": {
+          "1": {
+            "raster": 0.4906,
+            "calibrated": 0.4197
+          },
+          "5": {
+            "raster": 0.8296,
+            "calibrated": 0.7872
+          },
+          "10": {
+            "raster": 0.9315,
+            "calibrated": 0.9065
+          },
+          "25": {
+            "raster": 1.0,
+            "calibrated": 1.0
+          }
+        },
+        "deserts": {
+          "raster": 27,
+          "calibrated": 32,
+          "both": 24,
+          "raster_only": 3,
+          "calibrated_only": 8,
+          "same_top_hex": false
+        },
+        "hot_spot_hexes": {
+          "raster": 70,
+          "calibrated": 70,
+          "both": 70
+        },
+        "district_ranks_changed": {}
+      }
+    },
+    "r9": {
+      "accpct_jobs_walk_30": {
+        "mean": {
+          "raster": 2.746,
+          "calibrated": 3.3423
+        },
+        "median": {
+          "raster": 1.22,
+          "calibrated": 1.49
+        },
+        "gini": {
+          "raster": 0.601,
+          "calibrated": 0.5835
+        },
+        "palma": {
+          "raster": 6.2062,
+          "calibrated": 6.1984
+        },
+        "below_cutoffs": {
+          "1": {
+            "raster": 0.4337,
+            "calibrated": 0.381
+          },
+          "5": {
+            "raster": 0.8262,
+            "calibrated": 0.7797
+          },
+          "10": {
+            "raster": 0.9211,
+            "calibrated": 0.8939
+          },
+          "25": {
+            "raster": 1.0,
+            "calibrated": 1.0
+          }
+        },
+        "deserts": {
+          "raster": 183,
+          "calibrated": 178,
+          "both": 144,
+          "raster_only": 39,
+          "calibrated_only": 34,
+          "same_top_hex": false
+        },
+        "hot_spot_hexes": {
+          "raster": 341,
+          "calibrated": 341,
+          "both": 341
+        },
+        "district_ranks_changed": {}
+      },
+      "sfca_schools_walk": {
+        "mean": {
+          "raster": 0.1844,
+          "calibrated": 0.1843
+        },
+        "median": {
+          "raster": 0.0956,
+          "calibrated": 0.1175
+        },
+        "gini": {
+          "raster": 0.6524,
+          "calibrated": 0.6059
+        },
+        "palma": {
+          "raster": 42.4998,
+          "calibrated": 18.8941
+        },
+        "deserts": {
+          "raster": 269,
+          "calibrated": 230,
+          "both": 203,
+          "raster_only": 66,
+          "calibrated_only": 27,
+          "same_top_hex": true
+        },
+        "hot_spot_hexes": {
+          "raster": 168,
+          "calibrated": 130,
+          "both": 93
+        },
+        "district_ranks_changed": {
+          "auezov": {
+            "raster": 1,
+            "calibrated": 5
+          },
+          "bostandyk": {
+            "raster": 3,
+            "calibrated": 1
+          },
+          "nauryzbay": {
+            "raster": 4,
+            "calibrated": 6
+          },
+          "medeu": {
+            "raster": 5,
+            "calibrated": 3
+          },
+          "turksib": {
+            "raster": 6,
+            "calibrated": 4
+          }
+        }
+      },
+      "sfca_kindergartens_walk": {
+        "mean": {
+          "raster": 0.1455,
+          "calibrated": 0.1454
+        },
+        "median": {
+          "raster": 0.0,
+          "calibrated": 0.0598
+        },
+        "gini": {
+          "raster": 0.733,
+          "calibrated": 0.6929
+        },
+        "palma": {
+          "raster": "inf",
+          "calibrated": "inf"
+        },
+        "deserts": {
+          "raster": 415,
+          "calibrated": 360,
+          "both": 326,
+          "raster_only": 89,
+          "calibrated_only": 34,
+          "same_top_hex": false
+        },
+        "hot_spot_hexes": {
+          "raster": 240,
+          "calibrated": 182,
+          "both": 149
+        },
+        "district_ranks_changed": {
+          "auezov": {
+            "raster": 1,
+            "calibrated": 2
+          },
+          "almaly": {
+            "raster": 2,
+            "calibrated": 1
+          }
+        }
+      },
+      "sfca_clinics_walk": {
+        "mean": {
+          "raster": 0.3519,
+          "calibrated": 0.352
+        },
+        "median": {
+          "raster": 0.0835,
+          "calibrated": 0.1314
+        },
+        "gini": {
+          "raster": 0.7319,
+          "calibrated": 0.6774
+        },
+        "palma": {
+          "raster": "inf",
+          "calibrated": 60.8261
+        },
+        "deserts": {
+          "raster": 299,
+          "calibrated": 247,
+          "both": 223,
+          "raster_only": 76,
+          "calibrated_only": 24,
+          "same_top_hex": true
+        },
+        "hot_spot_hexes": {
+          "raster": 219,
+          "calibrated": 231,
+          "both": 170
+        },
+        "district_ranks_changed": {
+          "auezov": {
+            "raster": 2,
+            "calibrated": 4
+          },
+          "bostandyk": {
+            "raster": 3,
+            "calibrated": 2
+          },
+          "medeu": {
+            "raster": 4,
+            "calibrated": 3
+          },
+          "nauryzbay": {
+            "raster": 5,
+            "calibrated": 6
+          },
+          "turksib": {
+            "raster": 6,
+            "calibrated": 5
+          }
+        }
+      }
+    }
+  },
+  "headline": {
+    "sentence": "Between 51% and 62% of residents - depending on how the population raster is calibrated - can reach fewer than 5% of city jobs within 45 min by transit (approximate network, a lower bound), concentrated in Alatau and Turksib.",
+    "measure": "accpct_jobs_transit_45",
+    "res": 8,
+    "cutoff": 5.0,
+    "pop_share": 0.6155,
+    "pop_share_calibrated": 0.5148,
+    "districts_named": [
+      "alatau",
+      "turksib"
+    ],
+    "top_districts_raster": {
+      "alatau": 294712.0,
+      "turksib": 245164.0,
+      "medeu": 112514.0
+    },
+    "top_districts_calibrated": {
+      "alatau": 231050.0,
+      "turksib": 171082.0,
+      "nauryzbay": 141564.0
+    },
+    "district_rates": {
+      "alatau": 0.9068,
+      "almaly": 0.0,
+      "auezov": 0.0148,
+      "bostandyk": 0.3583,
+      "medeu": 0.4749,
+      "nauryzbay": 0.9885,
+      "turksib": 0.9865,
+      "zhetysu": 0.5122
+    },
+    "district_rates_calibrated": {
+      "alatau": 0.9068,
+      "almaly": 0.0,
+      "auezov": 0.0148,
+      "bostandyk": 0.3583,
+      "medeu": 0.4749,
+      "nauryzbay": 0.9885,
+      "turksib": 0.9865,
+      "zhetysu": 0.5122
+    }
+  },
+  "companions": [
+    "Between 59% and 65% of residents live within a 15-minute walk of the nearest clinic (r9; raster vs calibrated residents).",
+    "Between 77% and 81% of residents live within a 15-minute walk of the nearest grocery (r9; raster vs calibrated residents).",
+    "Between 48% and 55% of residents live within a 15-minute walk of the nearest kindergarten (r9; raster vs calibrated residents).",
+    "Between 8% and 11% of residents live within a 15-minute walk of the nearest metro (r9; raster vs calibrated residents).",
+    "22% of residents live within a 15-minute walk of the nearest park (r9).",
+    "Between 61% and 65% of residents live within a 15-minute walk of the nearest school (r9; raster vs calibrated residents)."
+  ],
+  "caveats": [
+    "Transit is approximate and a LOWER BOUND: OSM route relations with assumed speeds and headways; 55 routes with ordered stops are modelled and 122 of 712 inhabited r8 hexes host a modelled stop (DECISIONS D-044, D-047).",
+    "Car times are free-flow (no congestion): an UPPER BOUND on car access (D-046).",
+    "The mode gap divides a lower bound (transit) by an upper bound (car): it OVERSTATES car dependence and should be read as a ranking, not a level.",
+    "Jobs per hex are a model estimate (Phase 3 dasymetric surface), not a census.",
+    "Service counts and 2SFCA are hex-aggregated: they are analysed at the fine resolution only (D-049).",
+    "Deserts: population above its hex quantile AND access at or below the population-weighted access quantile (D-055). The README-literal rule (both quantiles across hexes) is counted beside every result as n_hexes_literal_rule; a measure without a meaningful low tail (free-flow car) reports no deserts.",
+    "LISA p-values are tie-aware two-sided pseudo p-values from seeded conditional permutations, so cluster counts are Monte Carlo estimates: `borderline` gives, per measure, the hexes within two standard errors of alpha that another seed could flip (on zero-heavy measures they flip in blocks). One test per hex also means multiple testing - the FDR counts are the conservative reading, and null where the permutation count cannot resolve them.",
+    "For many residents the modelled transit adds nothing over walking (share of residents with transit = walk job access, across the weightings: 100% at 15 min, 80% and 83% at 30 min, 43% and 50% at 45 min, 23% and 27% at 60 min); transit rankings and transit deserts partly measure where OSM lacks stop members.",
+    "2SFCA is zero-inflated (59%-67% of inhabited r9 hexes reach no facility within the catchment): its LISA can flag provision hot spots, but a zero among zeros is not statistically surprising and does not become a cold spot.",
+    "12 r9 hexes (37,028 raster residents) hold nearly all residents of their coarse parent although the neighbouring children are built up: an artifact of the residential-floor-area split (flag `point_mass`). They top rankings by residents - read fine-resolution ranks with that flag.",
+    "Residents per hex come from Kontur Population, a modelled raster that is skewed between districts: against the district shares of employed residents (source: taldau.stat.gov.kz GetIndexTreeData p_index_id=702840) it gives Turksib 1.51x and Auezov 0.42x their share (r9 grid). Every population-weighted result is therefore produced twice - `raster` and `calibrated` - and 2SFCA is recomputed with calibrated demand; `comparison` lists what changes. Absolute resident counts inherit the raster's undercount: prefer shares."
+  ]
+}

@@ -57,3 +57,6 @@ jobs:
 
       - name: Scenarios on the committed sample (offline)
         run: uv run almaty-access scenarios -c config/config.sample.yaml -v
+
+      - name: Export (dashboard bundle + web map) on the committed sample (offline)
+        run: uv run almaty-access export -c config/config.sample.yaml -v

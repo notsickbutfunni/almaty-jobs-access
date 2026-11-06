@@ -80,7 +80,12 @@ class TravelConfig:
 
 @dataclass(frozen=True)
 class PathsConfig:
-    """Data directories, resolved to absolute paths against the repo root."""
+    """Data directories, resolved to absolute paths against the repo root.
+
+    ``app`` holds the curated dashboard bundle (committed for free
+    hosting) and ``webmap`` the static one-page map, both written by
+    ``almaty-access export`` (Phase 7).
+    """
 
     root: Path
     raw: Path
@@ -88,6 +93,8 @@ class PathsConfig:
     processed: Path
     sample: Path
     figures: Path
+    app: Path
+    webmap: Path
 
 
 @dataclass(frozen=True)
@@ -997,7 +1004,7 @@ def _pois_from(section: dict[str, Any], root: Path) -> PoisConfig:
 
 def _paths_from(section: dict[str, Any], root: Path) -> PathsConfig:
     resolved: dict[str, Path] = {}
-    for key in ("raw", "interim", "processed", "sample", "figures"):
+    for key in ("raw", "interim", "processed", "sample", "figures", "app", "webmap"):
         value = _non_empty_str(section.get(key), f"paths.{key}")
         candidate = Path(value)
         resolved[key] = candidate if candidate.is_absolute() else root / candidate

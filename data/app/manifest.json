@@ -1,0 +1,26 @@
+{
+  "res": 8,
+  "note": "Dashboard data bundle, written by `almaty-access export --only bundle`. Everything here is derived from open data (OSM/Geofabrik, Kontur population, Overture buildings, Copernicus GLO-30, stat.gov.kz Taldau); sources and licences are documented in data/README.md. Transit measures are approximate lower bounds; scenarios are illustrative alignments, not official designs.",
+  "files": {
+    "access_r8.parquet": 351681,
+    "access_report.json": 6411,
+    "equity_calibrated_r8.parquet": 75875,
+    "equity_districts.parquet": 7171,
+    "equity_lorenz.parquet": 17614,
+    "equity_r8.parquet": 72474,
+    "equity_report.json": 66248,
+    "equity_summary.parquet": 14263,
+    "jobs_r8.parquet": 42761,
+    "model_report.json": 6865,
+    "scenario_bike_west_r8.parquet": 190385,
+    "scenario_brt_raiymbek_r8.parquet": 128135,
+    "scenario_metro_extension_r8.parquet": 126005,
+    "scenarios_gains.parquet": 5028,
+    "scenarios_report.json": 24314,
+    "scenarios_summary.parquet": 9076,
+    "tt_bike_r8.parquet": 852020,
+    "tt_car_r8.parquet": 4886931,
+    "tt_transit_r8.parquet": 178895,
+    "tt_walk_r8.parquet": 168083
+  }
+}

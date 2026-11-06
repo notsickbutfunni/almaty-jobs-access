@@ -1387,3 +1387,116 @@ weightings, and the scenario report quotes both, always.
   than any code. The margin that matters is against real OSM ids
   (~1.2 x 10^10). *Lesson: a bound in a test is a claim too - compute
   it, do not eyeball powers.*
+
+# Phase 7 - The dashboard and the static map
+
+## The thirty-second tour (what the README asked for)
+
+README §7 Phase 7: *"a non-technical person can explore the results in
+30 seconds."* The deliverable is three things:
+
+1. **`app/streamlit_app.py`** — the interactive dashboard. Sidebar
+   picks a layer (accessibility / jobs / population / transit-vs-car
+   gap / LISA clusters / access deserts / scenario gain), a mode, a
+   time budget, an opportunity type, a population weighting and a
+   scenario; the map is a pydeck `H3HexagonLayer`; clicking a hex
+   highlights everything reachable from it and shows a small table;
+   a Districts tab has bar charts and Lorenz curves; a Method tab
+   explains sources and limitations; download buttons export CSV /
+   Parquet. Run it with `streamlit run app/streamlit_app.py`.
+2. **`data/app/`** — a committed ~7 MB bundle of exactly the tables
+   the app reads, so free hosting works from a bare clone (D-069).
+3. **`docs/webmap/index.html`** — one static, self-contained page with
+   the headline measure, for people who will not open an app; GitHub
+   Pages serves it from the `docs/` folder.
+
+Both artifacts come from one cached CLI stage: `almaty-access export`.
+
+## Why the app is a thin shell (and why you should care)
+
+Streamlit scripts are easy to write and miserable to test if data
+logic lives inside them. Phase 7 splits the work:
+
+- `src/almaty_access/dashboard/` holds every decision — which
+  directory to read (`data.py`), what each sidebar state means as a
+  table of hexes with colors (`layers.py`), the reach math
+  (`reach.py`), the chart specs (`charts.py`), the exporters
+  (`bundle.py`, `webmap.py`).
+- `app/streamlit_app.py` only draws widgets and calls the package.
+
+The payoff is the test suite: the data layer is ordinary pytest, and
+the app itself runs headlessly under `streamlit.testing.v1.AppTest` —
+the tests boot it, flip every layer, select a scenario, "click" a hex
+and break the data directory, all without a browser. If you ever
+inherit a Streamlit app with pandas inside the widgets, this split is
+the refactor to reach for.
+
+## One mechanism worth remembering: H3 ids ARE the geometry
+
+Nothing in the app ships polygons. pydeck's `H3HexagonLayer` (and the
+static map) take the 15-character cell id and draw the hexagon
+client-side — that is why the committed bundle stays at 7 MB, why
+`grid_r8.parquet`'s geometry column never leaves the pipeline, and why
+the README recommends H3 for dashboards in the first place.
+
+## The click: how "what can this hex reach?" works
+
+Phase 4 stored the travel-time matrices long (`origin_h3`, `dest_h3`,
+`minutes`, pairs ≤ 60 min) at r8 for all four modes. A click filters
+one origin out of that table — no routing happens in the app. The
+panel then recomputes "jobs within reach" by summing `jobs_rf` over
+the reached hexes and the test suite checks it equals the stored
+`acc_jobs_*` value to rounding slack: the same number produced two
+independent ways, which is the cheapest honesty check a dashboard can
+carry. Two honest limits, both stated in the UI: the isochrone is
+r8-coarse, and it is the BASELINE network even when a scenario is
+toggled on (Phase 6 stored deltas, not scenario matrices — D-071).
+
+## Colors, again, because a map is a chart
+
+The map reuses the chart system from notebooks 05/06, and the color
+checks earned their keep a second time: the notebook LISA tints fail
+the all-pairs colorblind check for the HL/LH pair (13.7 normal-vision
+distance, floor 15), which no two-hue tint stepping can fix — so the
+dashboard folds both outlier classes into one yellow class (D-070).
+Two smaller rules that make the map readable: the scenario-gain layer
+paints ONLY hexes that gain (a zero painted pale blue reads as
+"changed"), and the gap layer flips the ramp so DARK means "transit
+lags car most" — attention goes where the problem is.
+
+## Interview Q&A
+
+- *"How would you deploy this for free?"* Commit a curated data bundle
+  (small, open-data-derived), let the app resolve env var → bundle →
+  full pipeline → sample, push to Streamlit Community Cloud (installs
+  from `pyproject.toml`), and serve the static map from GitHub Pages'
+  `docs/` folder. Zero secrets: key-less Carto basemap.
+- *"How do you test a Streamlit app?"* Keep the app free of logic,
+  unit-test the package underneath, then drive the app with AppTest:
+  assert no exception per interaction, inject the click through
+  session state, and point it at broken data to see the clean error.
+- *"Why percentile-clipped color scales?"* Access distributions are
+  heavy-tailed; min-max lets three downtown hexes consume the whole
+  ramp. Clipping at P2-P98 (and saying so in the caption) keeps the
+  middle of the distribution visible without lying about the extremes.
+
+## What went wrong before it went right (Phase 7 edition)
+
+- **The grouped bars overlapped.** The first gains chart forced a
+  34 px bar width inside an `xOffset` band narrower than two bars, and
+  the value labels inherited the series color from the shared
+  encoding — light blue text on a dark blue neighbour. Fix: let the
+  offset band size the bars, and give the text layer
+  `color=alt.value(INK)` — in Vega-Lite an encoding beats a mark
+  property, so "text wears ink" has to be said as an encoding.
+  *Lesson: render the chart and look at it; the spec compiled fine.*
+- **The delta map claimed credit everywhere.** Zero-gain hexes painted
+  in the palest ramp step made the whole city look touched by the BRT.
+  One `deltas.where(deltas > 0)` and the corridor told its own story.
+- **The sample said LISA was broken when it wasn't.** On the 3-hex
+  sample every LISA verdict is `<NA>` (too few neighbours for FDR), so
+  the first "legend matches classes" test failed on an empty, correct
+  layer. The test now asserts the empty case explicitly and injects
+  synthetic verdicts to exercise the mapping. *Lesson: a tiny fixture
+  exercises the degenerate path — make the test know which path it is
+  on.*

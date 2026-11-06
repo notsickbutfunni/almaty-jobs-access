@@ -1,0 +1,783 @@
+{
+  "approximate_transit": true,
+  "resolution": 8,
+  "params": {
+    "attach_max_m": 1000.0,
+    "stop_spacing_m": 600.0,
+    "bike_buffer_m": 30.0,
+    "gain_cutoffs_jobs": [
+      1000.0,
+      10000.0,
+      50000.0
+    ],
+    "thresholds_min": [
+      15,
+      30,
+      45,
+      60
+    ],
+    "gravity_half_life_min": 20.0
+  },
+  "total_jobs": 1091192.5,
+  "weightings": {
+    "raster": {
+      "method": "Kontur raster residents as prepared in Phase 1"
+    },
+    "calibrated": {
+      "method": "hex residents rescaled so that district totals follow the district shares of employed residents in district_stats.csv (2025; source: taldau.stat.gov.kz GetIndexTreeData p_index_id=702840); the city total and the within-district distribution are unchanged",
+      "synthetic": false,
+      "factors": {
+        "alatau": 0.784,
+        "almaly": 1.5514,
+        "auezov": 2.7846,
+        "bostandyk": 1.1253,
+        "medeu": 0.7317,
+        "nauryzbay": 1.3029,
+        "turksib": 0.6978,
+        "zhetysu": 0.6963
+      }
+    }
+  },
+  "scenarios": {
+    "bike_west": {
+      "title": "Protected bike corridors in the west (mobility plan 2025-2026)",
+      "note": "ILLUSTRATIVE version of the 2025-2026 mobility-plan bike corridors serving the western districts: Tole Bi, Saina (Ryskulov - Monke Bi) and Zhubanov streets, drawn from OSM street geometry (announced lengths: 9 + 6 + 9 km; the OSM-drawable parts are shorter). The boost assumes protected lanes raise the flat riding speed from 15 to 18 km/h on matched street edges; grades still apply.",
+      "sources": [
+        "https://www.zakon.kz/obshestvo/6501415-55-km-novykh-velodorozhek-poyavitsya-v-almaty.html",
+        "https://cmn.kz/bolee-20-km-velodorozhek-otkroyut-v-almaty-v-2025-godu/",
+        "https://www.gov.kz/org/almaty/press/news/details/942498?lang=ru"
+      ],
+      "modes": [
+        "bike"
+      ],
+      "results": {
+        "raster": {
+          "population": 1523203.0,
+          "measures": {
+            "accpct_jobs_bike_15": {
+              "mean": [
+                4.742,
+                4.787
+              ],
+              "median": [
+                2.16,
+                2.16
+              ],
+              "gini": [
+                0.6064,
+                0.6068
+              ]
+            },
+            "accpct_jobs_bike_30": {
+              "mean": [
+                21.967,
+                22.251
+              ],
+              "median": [
+                16.76,
+                17.26
+              ],
+              "gini": [
+                0.426,
+                0.4263
+              ]
+            },
+            "accpct_jobs_bike_45": {
+              "mean": [
+                46.341,
+                46.843
+              ],
+              "median": [
+                49.3,
+                49.89
+              ],
+              "gini": [
+                0.2547,
+                0.2524
+              ]
+            },
+            "accpct_jobs_bike_60": {
+              "mean": [
+                67.262,
+                67.662
+              ],
+              "median": [
+                73.11,
+                73.87
+              ],
+              "gini": [
+                0.1374,
+                0.1357
+              ]
+            },
+            "acc_jobs_bike_grav": {
+              "mean": [
+                231827.759,
+                233944.115
+              ],
+              "median": [
+                223368.4,
+                224802.5
+              ],
+              "gini": [
+                0.2484,
+                0.2475
+              ]
+            }
+          },
+          "gains": {
+            "1000": {
+              "residents": 719450.0,
+              "share": 0.4723
+            },
+            "10000": {
+              "residents": 264678.0,
+              "share": 0.1738
+            },
+            "50000": {
+              "residents": 16911.0,
+              "share": 0.0111
+            }
+          }
+        },
+        "calibrated": {
+          "population": 1523203.0,
+          "measures": {
+            "accpct_jobs_bike_15": {
+              "mean": [
+                5.829,
+                5.915
+              ],
+              "median": [
+                2.96,
+                2.96
+              ],
+              "gini": [
+                0.5762,
+                0.5758
+              ]
+            },
+            "accpct_jobs_bike_30": {
+              "mean": [
+                25.331,
+                25.755
+              ],
+              "median": [
+                22.21,
+                23.41
+              ],
+              "gini": [
+                0.3925,
+                0.3921
+              ]
+            },
+            "accpct_jobs_bike_45": {
+              "mean": [
+                50.046,
+                50.629
+              ],
+              "median": [
+                55.34,
+                55.69
+              ],
+              "gini": [
+                0.2267,
+                0.2239
+              ]
+            },
+            "accpct_jobs_bike_60": {
+              "mean": [
+                69.615,
+                70.0
+              ],
+              "median": [
+                74.64,
+                74.86
+              ],
+              "gini": [
+                0.1176,
+                0.1158
+              ]
+            },
+            "acc_jobs_bike_grav": {
+              "mean": [
+                250838.04,
+                253399.831
+              ],
+              "median": [
+                253520.6,
+                255845.3
+              ],
+              "gini": [
+                0.232,
+                0.2311
+              ]
+            }
+          },
+          "gains": {
+            "1000": {
+              "residents": 789268.0,
+              "share": 0.5182
+            },
+            "10000": {
+              "residents": 297386.0,
+              "share": 0.1952
+            },
+            "50000": {
+              "residents": 28023.0,
+              "share": 0.0184
+            }
+          }
+        }
+      },
+      "headline_measure": "accpct_jobs_bike_45",
+      "headline": "Protected bike corridors in the west (mobility plan 2025-2026): between 264,678 and 297,386 residents (between 17.4 and 19.5% of the inhabited city) gain more than 10,000 jobs reachable within 45 min by bike; the bike access Gini moves from between 0.227 and 0.255 to between 0.224 and 0.252 (raster and calibrated weightings).",
+      "caveats": [
+        "ILLUSTRATIVE version of the 2025-2026 mobility-plan bike corridors serving the western districts: Tole Bi, Saina (Ryskulov - Monke Bi) and Zhubanov streets, drawn from OSM street geometry (announced lengths: 9 + 6 + 9 km; the OSM-drawable parts are shorter). The boost assumes protected lanes raise the flat riding speed from 15 to 18 km/h on matched street edges; grades still apply.",
+        "Bike corridors raise the FLAT riding speed on matched street edges only; grades, detours and the rest of the network are unchanged.",
+        "The job surface is the fixed Phase 3 estimate: no relocation of jobs or residents in response to the new infrastructure is modelled."
+      ],
+      "network": {
+        "bike": {
+          "corridors": [
+            {
+              "corridor": "Tole Bi corridor",
+              "speed_kmh": 18.0,
+              "buffer_m": 30.0,
+              "drawn_km": 11.41,
+              "edges_matched": 458,
+              "edge_km_matched": 29.59
+            },
+            {
+              "corridor": "Saina corridor",
+              "speed_kmh": 18.0,
+              "buffer_m": 30.0,
+              "drawn_km": 4.13,
+              "edges_matched": 87,
+              "edge_km_matched": 10.85
+            },
+            {
+              "corridor": "Zhubanov corridor",
+              "speed_kmh": 18.0,
+              "buffer_m": 30.0,
+              "drawn_km": 2.73,
+              "edges_matched": 133,
+              "edge_km_matched": 9.04
+            }
+          ],
+          "edges_boosted": 678,
+          "edge_km_boosted": 49.48
+        }
+      },
+      "matrix": {
+        "bike": {
+          "origins_offnetwork": 32,
+          "dests_offnetwork": 32,
+          "snap_m_median": 172.3,
+          "snap_m_p95": 1285.3,
+          "pairs": 324025
+        }
+      }
+    },
+    "brt_raiymbek": {
+      "title": "BRT corridor on Raiymbek Batyr Avenue",
+      "note": "ILLUSTRATIVE alignment of the announced (currently suspended) BRT corridor along Raiymbek Batyr Avenue: stage 1 Pushkin St - Akhrimenko St, stage 2 onward to the Barlyk market, ~17 km in total. Drawn from OSM street geometry. Operating parameters are assumptions: 22 km/h commercial speed (dedicated lanes), 5-minute peak headway; stops are synthesized every 800 m. Edit this file to test other assumptions.",
+      "sources": [
+        "https://kz.kursiv.media/2024-08-06/dlzh-brt-almaty-stroyka/",
+        "https://lsm.kz/v-almaty-poyavitsya-novaya-liniya-brt",
+        "https://ru.wikipedia.org/wiki/\u0410\u043b\u043c\u0430\u0442\u0438\u043d\u0441\u043a\u0438\u0439_BRT",
+        "https://www.inform.kz/ru/kak-izmenitsya-transportnaya-set-almati-v-2025-godu-9eae22"
+      ],
+      "modes": [
+        "transit"
+      ],
+      "results": {
+        "raster": {
+          "population": 1523203.0,
+          "measures": {
+            "accpct_jobs_transit_15": {
+              "mean": [
+                0.355,
+                0.356
+              ],
+              "median": [
+                0.1,
+                0.1
+              ],
+              "gini": [
+                0.686,
+                0.6854
+              ]
+            },
+            "accpct_jobs_transit_30": {
+              "mean": [
+                3.118,
+                3.329
+              ],
+              "median": [
+                1.12,
+                1.12
+              ],
+              "gini": [
+                0.6638,
+                0.6647
+              ]
+            },
+            "accpct_jobs_transit_45": {
+              "mean": [
+                8.926,
+                9.999
+              ],
+              "median": [
+                3.6,
+                3.68
+              ],
+              "gini": [
+                0.6215,
+                0.6238
+              ]
+            },
+            "accpct_jobs_transit_60": {
+              "mean": [
+                17.906,
+                19.956
+              ],
+              "median": [
+                7.88,
+                8.81
+              ],
+              "gini": [
+                0.5467,
+                0.5417
+              ]
+            },
+            "acc_jobs_transit_grav": {
+              "mean": [
+                50080.083,
+                55240.344
+              ],
+              "median": [
+                21689.3,
+                22818.8
+              ],
+              "gini": [
+                0.5789,
+                0.5759
+              ]
+            }
+          },
+          "gains": {
+            "1000": {
+              "residents": 319563.0,
+              "share": 0.2098
+            },
+            "10000": {
+              "residents": 264487.0,
+              "share": 0.1736
+            },
+            "50000": {
+              "residents": 125625.0,
+              "share": 0.0825
+            }
+          }
+        },
+        "calibrated": {
+          "population": 1523203.0,
+          "measures": {
+            "accpct_jobs_transit_15": {
+              "mean": [
+                0.434,
+                0.435
+              ],
+              "median": [
+                0.14,
+                0.14
+              ],
+              "gini": [
+                0.6693,
+                0.6685
+              ]
+            },
+            "accpct_jobs_transit_30": {
+              "mean": [
+                3.868,
+                4.121
+              ],
+              "median": [
+                1.51,
+                1.53
+              ],
+              "gini": [
+                0.6359,
+                0.6331
+              ]
+            },
+            "accpct_jobs_transit_45": {
+              "mean": [
+                11.179,
+                12.402
+              ],
+              "median": [
+                4.63,
+                5.08
+              ],
+              "gini": [
+                0.5875,
+                0.5834
+              ]
+            },
+            "accpct_jobs_transit_60": {
+              "mean": [
+                21.933,
+                24.169
+              ],
+              "median": [
+                14.43,
+                17.07
+              ],
+              "gini": [
+                0.5015,
+                0.491
+              ]
+            },
+            "acc_jobs_transit_grav": {
+              "mean": [
+                61754.387,
+                67535.298
+              ],
+              "median": [
+                32219.3,
+                39012.6
+              ],
+              "gini": [
+                0.5398,
+                0.5319
+              ]
+            }
+          },
+          "gains": {
+            "1000": {
+              "residents": 373036.0,
+              "share": 0.2449
+            },
+            "10000": {
+              "residents": 295944.0,
+              "share": 0.1943
+            },
+            "50000": {
+              "residents": 143102.0,
+              "share": 0.0939
+            }
+          }
+        }
+      },
+      "headline_measure": "accpct_jobs_transit_45",
+      "headline": "BRT corridor on Raiymbek Batyr Avenue: between 264,487 and 295,944 residents (between 17.4 and 19.4% of the inhabited city) gain more than 10,000 jobs reachable within 45 min by transit; the transit access Gini moves from between 0.588 and 0.622 to between 0.583 and 0.624 (raster and calibrated weightings).",
+      "caveats": [
+        "ILLUSTRATIVE alignment of the announced (currently suspended) BRT corridor along Raiymbek Batyr Avenue: stage 1 Pushkin St - Akhrimenko St, stage 2 onward to the Barlyk market, ~17 km in total. Drawn from OSM street geometry. Operating parameters are assumptions: 22 km/h commercial speed (dedicated lanes), 5-minute peak headway; stops are synthesized every 800 m. Edit this file to test other assumptions.",
+        "Deltas are measured against the approximate OSM lower-bound transit baseline (D-044): where the baseline misses real routes, part of the gain shown here already exists on the street.",
+        "Assumed operating parameters of the new line(s): BRT Raiymbek: 22 km/h, headway 5 min",
+        "The job surface is the fixed Phase 3 estimate: no relocation of jobs or residents in response to the new infrastructure is modelled."
+      ],
+      "network": {
+        "transit": {
+          "lines": [
+            {
+              "line": "BRT Raiymbek",
+              "kind": "new_route",
+              "mode": "bus",
+              "route_id": 1000000000021,
+              "speed_kmh": 22.0,
+              "headway_min": 5.0,
+              "length_km": 15.68,
+              "stations": [
+                "BRT Raiymbek 1",
+                "BRT Raiymbek 2",
+                "BRT Raiymbek 3",
+                "BRT Raiymbek 4",
+                "BRT Raiymbek 5",
+                "BRT Raiymbek 6",
+                "BRT Raiymbek 7",
+                "BRT Raiymbek 8",
+                "BRT Raiymbek 9",
+                "BRT Raiymbek 10",
+                "BRT Raiymbek 11",
+                "BRT Raiymbek 12",
+                "BRT Raiymbek 13",
+                "BRT Raiymbek 14",
+                "BRT Raiymbek 15",
+                "BRT Raiymbek 16",
+                "BRT Raiymbek 17",
+                "BRT Raiymbek 18",
+                "BRT Raiymbek 19",
+                "BRT Raiymbek 20",
+                "BRT Raiymbek 21"
+              ]
+            }
+          ],
+          "n_new_stops": 21,
+          "n_new_routes": 1,
+          "n_new_legs": 40
+        }
+      },
+      "matrix": {
+        "transit": {
+          "origins_offnetwork": 26,
+          "dests_offnetwork": 26,
+          "snap_m_median": 164.2,
+          "snap_m_p95": 1083.0,
+          "pairs": 44908
+        }
+      }
+    },
+    "metro_extension": {
+      "title": "Metro line 1 extension: B. Momyshuly to Kalkaman and Barlyk",
+      "note": "ILLUSTRATIVE alignment anchored to the announced extension: the Kalkaman station (under construction, ~99% complete as of early 2026) and the follow-on section toward the Barlyk market through the Shugyla microdistrict along Alatau Avenue (construction started 2026). Drawn from OSM street geometry (Abay Avenue prolongation, Alatau Avenue); the stations beyond Kalkaman are NOT officially named - 'Shugyla' and 'Barlyk' are placeholders at plausible locations. Replace with the official design when published.",
+      "sources": [
+        "https://tengrinews.kz/news/budet-stantsiya-metro-kalkaman-almatyi-kogda-e-otkroyut-594445/",
+        "https://www.zakon.kz/stati/6511691-novaya-stantsiya-metro-kalkaman-v-almaty-chto-uzhe-gotovo-i-kogda-zapusk.html",
+        "https://kapital.kz/gosudarstvo/152857/v-almaty-do-konca-2026-goda-otkroyut-stanciyu-metro-kalkaman-akimat.html",
+        "https://ru.wikipedia.org/wiki/\u0410\u043b\u043c\u0430\u0442\u0438\u043d\u0441\u043a\u0438\u0439_\u043c\u0435\u0442\u0440\u043e\u043f\u043e\u043b\u0438\u0442\u0435\u043d"
+      ],
+      "modes": [
+        "transit"
+      ],
+      "results": {
+        "raster": {
+          "population": 1523203.0,
+          "measures": {
+            "accpct_jobs_transit_15": {
+              "mean": [
+                0.355,
+                0.355
+              ],
+              "median": [
+                0.1,
+                0.1
+              ],
+              "gini": [
+                0.686,
+                0.686
+              ]
+            },
+            "accpct_jobs_transit_30": {
+              "mean": [
+                3.118,
+                3.121
+              ],
+              "median": [
+                1.12,
+                1.12
+              ],
+              "gini": [
+                0.6638,
+                0.6631
+              ]
+            },
+            "accpct_jobs_transit_45": {
+              "mean": [
+                8.926,
+                9.01
+              ],
+              "median": [
+                3.6,
+                3.63
+              ],
+              "gini": [
+                0.6215,
+                0.6182
+              ]
+            },
+            "accpct_jobs_transit_60": {
+              "mean": [
+                17.906,
+                18.293
+              ],
+              "median": [
+                7.88,
+                8.81
+              ],
+              "gini": [
+                0.5467,
+                0.5405
+              ]
+            },
+            "acc_jobs_transit_grav": {
+              "mean": [
+                50080.083,
+                50843.096
+              ],
+              "median": [
+                21689.3,
+                22533.8
+              ],
+              "gini": [
+                0.5789,
+                0.5734
+              ]
+            }
+          },
+          "gains": {
+            "1000": {
+              "residents": 102726.0,
+              "share": 0.0674
+            },
+            "10000": {
+              "residents": 16450.0,
+              "share": 0.0108
+            },
+            "50000": {
+              "residents": 6914.0,
+              "share": 0.0045
+            }
+          }
+        },
+        "calibrated": {
+          "population": 1523203.0,
+          "measures": {
+            "accpct_jobs_transit_15": {
+              "mean": [
+                0.434,
+                0.434
+              ],
+              "median": [
+                0.14,
+                0.14
+              ],
+              "gini": [
+                0.6693,
+                0.6693
+              ]
+            },
+            "accpct_jobs_transit_30": {
+              "mean": [
+                3.868,
+                3.874
+              ],
+              "median": [
+                1.51,
+                1.51
+              ],
+              "gini": [
+                0.6359,
+                0.6351
+              ]
+            },
+            "accpct_jobs_transit_45": {
+              "mean": [
+                11.179,
+                11.3
+              ],
+              "median": [
+                4.63,
+                4.71
+              ],
+              "gini": [
+                0.5875,
+                0.5833
+              ]
+            },
+            "accpct_jobs_transit_60": {
+              "mean": [
+                21.933,
+                22.461
+              ],
+              "median": [
+                14.43,
+                15.48
+              ],
+              "gini": [
+                0.5015,
+                0.4929
+              ]
+            },
+            "acc_jobs_transit_grav": {
+              "mean": [
+                61754.387,
+                62805.33
+              ],
+              "median": [
+                32219.3,
+                37570.0
+              ],
+              "gini": [
+                0.5398,
+                0.5325
+              ]
+            }
+          },
+          "gains": {
+            "1000": {
+              "residents": 185870.0,
+              "share": 0.122
+            },
+            "10000": {
+              "residents": 21433.0,
+              "share": 0.0141
+            },
+            "50000": {
+              "residents": 9008.0,
+              "share": 0.0059
+            }
+          }
+        }
+      },
+      "headline_measure": "accpct_jobs_transit_45",
+      "headline": "Metro line 1 extension: B. Momyshuly to Kalkaman and Barlyk: between 16,450 and 21,433 residents (between 1.1 and 1.4% of the inhabited city) gain more than 10,000 jobs reachable within 45 min by transit; the transit access Gini moves from between 0.588 and 0.622 to between 0.583 and 0.618 (raster and calibrated weightings).",
+      "caveats": [
+        "ILLUSTRATIVE alignment anchored to the announced extension: the Kalkaman station (under construction, ~99% complete as of early 2026) and the follow-on section toward the Barlyk market through the Shugyla microdistrict along Alatau Avenue (construction started 2026). Drawn from OSM street geometry (Abay Avenue prolongation, Alatau Avenue); the stations beyond Kalkaman are NOT officially named - 'Shugyla' and 'Barlyk' are placeholders at plausible locations. Replace with the official design when published.",
+        "Deltas are measured against the approximate OSM lower-bound transit baseline (D-044): where the baseline misses real routes, part of the gain shown here already exists on the street.",
+        "The job surface is the fixed Phase 3 estimate: no relocation of jobs or residents in response to the new infrastructure is modelled."
+      ],
+      "network": {
+        "transit": {
+          "lines": [
+            {
+              "line": "Kalkaman extension",
+              "kind": "extension",
+              "mode": "subway",
+              "extends_route_ref": "1",
+              "attachments": [
+                {
+                  "route_id": 5555280,
+                  "attached_at": "last_stop",
+                  "gap_m": 0.9,
+                  "n_new_legs": 3
+                },
+                {
+                  "route_id": 7734271,
+                  "attached_at": "first_stop",
+                  "gap_m": 0.9,
+                  "n_new_legs": 3
+                }
+              ],
+              "length_km": 6.81,
+              "stations": [
+                "\u041a\u0430\u043b\u049b\u0430\u043c\u0430\u043d",
+                "\u0428\u04b1\u0493\u044b\u043b\u0430 (placeholder)",
+                "\u0411\u0430\u0440\u043b\u044b\u049b (placeholder)"
+              ]
+            }
+          ],
+          "n_new_stops": 3,
+          "n_new_routes": 0,
+          "n_new_legs": 6
+        }
+      },
+      "matrix": {
+        "transit": {
+          "origins_offnetwork": 26,
+          "dests_offnetwork": 26,
+          "snap_m_median": 164.2,
+          "snap_m_p95": 1083.0,
+          "pairs": 43984
+        }
+      }
+    }
+  },
+  "caveats": [
+    "Scenario alignments are ILLUSTRATIVE drawings anchored to publicly announced projects, not official designs; redraw the GeoJSON files to study other alignments.",
+    "A scenario can only improve modelled times (arcs are added, never removed): construction disruption, service reorganisation and induced demand are out of scope.",
+    "Transit remains the approximate lower-bound layer of Phase 4: assumed speeds and headways, OSM route relations only (DECISIONS D-044)."
+  ]
+}

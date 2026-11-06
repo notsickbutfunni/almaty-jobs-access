@@ -28,6 +28,9 @@ paths:
   processed: data/sample/processed
   sample: data/sample
   figures: reports/figures
+  # Sample export outputs stay under data/sample/ and are git-ignored.
+  app: data/sample/app
+  webmap: data/sample/webmap
 
 area:
   place: "Almaty, Kazakhstan"

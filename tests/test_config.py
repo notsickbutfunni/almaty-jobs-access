@@ -87,6 +87,8 @@ def test_paths_resolve_against_repo_root(repo_config: Config, config_path: Path)
     assert repo_config.paths.raw == root / "data" / "raw"
     assert repo_config.paths.sample == root / "data" / "sample"
     assert repo_config.paths.figures == root / "reports" / "figures"
+    assert repo_config.paths.app == root / "data" / "app"
+    assert repo_config.paths.webmap == root / "docs" / "webmap"
 
 
 def test_missing_file_raises(tmp_path: Path) -> None:
@@ -226,6 +228,8 @@ INVALID_CASES = [
     ),
     pytest.param(_set("scenarios.gain_cutoffs_jobs", []), id="scenarios-cutoffs-empty"),
     pytest.param(_delete("scenarios"), id="scenarios-section-missing"),
+    pytest.param(_delete("paths.app"), id="paths-app-missing"),
+    pytest.param(_set("paths.webmap", ""), id="paths-webmap-empty"),
 ]
 
 

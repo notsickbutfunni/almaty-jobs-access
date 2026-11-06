@@ -38,6 +38,8 @@ def built(sample_config: Config, tmp_path_factory: pytest.TempPathFactory) -> Co
         processed=tmp / "processed",
         sample=sample_config.paths.sample,
         figures=tmp / "figures",
+        app=tmp / "app",
+        webmap=tmp / "webmap",
     )
     config = dataclasses.replace(sample_config, paths=paths)
     prepare_boundary(config)

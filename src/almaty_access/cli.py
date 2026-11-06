@@ -2,8 +2,8 @@
 
 Each sub-command is one pipeline stage (README §6-§7): ``download`` →
 ``prepare`` → ``features`` → ``model`` → ``access`` → ``equity`` →
-``scenarios``, each with make-style caching (``--force`` rebuilds;
-multi-step stages take ``--only``). Stages of later phases validate the
+``scenarios`` → ``export``, each with make-style caching (``--force``
+rebuilds; multi-step stages take ``--only``). Stages of later phases validate the
 configuration, then exit with code 2 and point at their phase. Exit
 codes: 0 success, 1 config or pipeline error, 2 stage not implemented
 yet.
@@ -21,6 +21,8 @@ import typer
 from almaty_access import __version__
 from almaty_access.access import build as access_build
 from almaty_access.config import Config, load_config, seed_everything
+from almaty_access.dashboard import bundle as dash_bundle
+from almaty_access.dashboard import webmap as dash_webmap
 from almaty_access.download import buildings as dl_buildings
 from almaty_access.download import dem as dl_dem
 from almaty_access.download import osm as dl_osm
@@ -92,6 +94,11 @@ PREPARE_STEPS: dict[str, StepFunc] = {
 ACCESS_STEPS: dict[str, StepFunc] = {
     "times": access_build.build_times,
     "measures": access_build.build_measures,
+}
+
+EXPORT_STEPS: dict[str, StepFunc] = {
+    "bundle": dash_bundle.build_bundle,
+    "webmap": dash_webmap.build_webmap,
 }
 
 
@@ -198,7 +205,7 @@ def info(config: ConfigOpt = DEFAULT_CONFIG, verbose: VerboseOpt = False) -> Non
         f"random seed      : {cfg.random_seed}",
         "paths:",
     ]
-    for name in ("raw", "interim", "processed", "sample", "figures"):
+    for name in ("raw", "interim", "processed", "sample", "figures", "app", "webmap"):
         path: Path = getattr(cfg.paths, name)
         status = "ok" if path.exists() else "missing"
         lines.append(f"  {name:<10} {status:>7}  {path}")
@@ -353,6 +360,26 @@ def scenarios(
     _run_steps(
         {"scenarios": scenarios_build.build_scenarios}, cfg, only=None, force=force, verbose=verbose
     )
+
+
+@app.command()
+def export(
+    config: ConfigOpt = DEFAULT_CONFIG,
+    only: OnlyOpt = None,
+    force: ForceOpt = False,
+    verbose: VerboseOpt = False,
+) -> None:
+    """Dashboard bundle and static web map (cached). [Phase 7]
+
+    Steps in order: bundle (copies the dashboard's inputs — r8 tables,
+    time matrices, report JSONs — into paths.app, the committed
+    data/app/ folder free hosting serves), webmap (self-contained
+    paths.webmap/index.html of the headline measure, for GitHub Pages).
+    Requires `almaty-access scenarios` to have run. Serve the dashboard
+    itself with: streamlit run app/streamlit_app.py
+    """
+    cfg = _load_and_seed(config, verbose)
+    _run_steps(EXPORT_STEPS, cfg, only=only, force=force, verbose=verbose)
 
 
 @app.command()

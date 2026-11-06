@@ -40,6 +40,9 @@ paths:
   processed: data/processed
   sample: data/sample
   figures: reports/figures
+  # Dashboard data bundle and static web map (committed; D-069).
+  app: data/app
+  webmap: docs/webmap
 
 # What to download. 'place' is geocoded to the city polygon; 'bbox'
 # ([min_lon, min_lat, max_lon, max_lat], EPSG:4326) narrows bbox-capable

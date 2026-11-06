@@ -28,6 +28,9 @@ dependencies = [
     "shap>=0.54.1",
     "libpysal>=4.15.1",
     "esda>=2.10.0",
+    "streamlit>=1.60",
+    "pydeck>=0.9.1",
+    "altair>=5.4",
 ]
 
 [project.scripts]

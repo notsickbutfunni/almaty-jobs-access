@@ -61,6 +61,8 @@ def sample_pipeline(sample_config: Config, tmp_path_factory: pytest.TempPathFact
         processed=tmp / "processed",
         sample=sample_config.paths.sample,
         figures=tmp / "figures",
+        app=tmp / "app",
+        webmap=tmp / "webmap",
     )
     config = dataclasses.replace(sample_config, paths=paths)
     prepare_boundary(config)
@@ -77,6 +79,22 @@ def sample_pipeline(sample_config: Config, tmp_path_factory: pytest.TempPathFact
     return config
 
 
+@pytest.fixture(scope="session")
+def dashboard_sample(sample_pipeline: Config) -> Config:
+    """The sample run extended with the equity and scenarios stages.
+
+    This is everything the Phase 7 dashboard reads; both dashboard test
+    modules share it (the builds are cached, so whichever module runs
+    first pays once).
+    """
+    from almaty_access.equity.build import build_equity
+    from almaty_access.scenarios.build import build_scenarios
+
+    build_equity(sample_pipeline)
+    build_scenarios(sample_pipeline)
+    return sample_pipeline
+
+
 @pytest.fixture()
 def tmp_config(repo_config: Config, tmp_path: Path) -> Config:
     """Repo config with all data paths redirected into tmp_path."""
@@ -87,6 +105,8 @@ def tmp_config(repo_config: Config, tmp_path: Path) -> Config:
         processed=tmp_path / "processed",
         sample=tmp_path / "sample",
         figures=tmp_path / "figures",
+        app=tmp_path / "app",
+        webmap=tmp_path / "webmap",
     )
     return dataclasses.replace(repo_config, paths=paths)
 
@@ -101,5 +121,7 @@ def sample_run_config(sample_config: Config, tmp_path: Path) -> Config:
         processed=tmp_path / "processed",
         sample=sample_config.paths.sample,
         figures=tmp_path / "figures",
+        app=tmp_path / "app",
+        webmap=tmp_path / "webmap",
     )
     return dataclasses.replace(sample_config, paths=paths)

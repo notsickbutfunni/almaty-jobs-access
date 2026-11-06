@@ -1361,3 +1361,95 @@ remains open), so a scenario's gain is overstated wherever the baseline
 misses real routes; the job surface is the fixed Phase 3 estimate (no
 land-use response); construction disruption and service reorganisation
 are out of scope — a scenario can only improve modelled times.
+
+## Phase 7 - Dashboard and maps (2026-11-06)
+
+### D-069: The deploy artifacts are committed to the repository
+
+**Decision.** Chosen with the user (2026-11-06): both Phase 7 deploy
+artifacts go into git — `data/app/` (the dashboard's inputs, 20 files /
+7.2 MB of r8 parquets, the four r8 time matrices and the report JSONs)
+and `docs/webmap/index.html` (the static one-page map, ~280 KB). They
+are written by the new cached stage `almaty-access export` (steps
+`bundle`, `webmap`). Rationale: Streamlit Community Cloud and GitHub
+Pages can only serve what is in the repository, `data/processed/` and
+even `data/sample/processed/` are git-ignored, and everything in the
+bundle is derived from open data — so committing ~7.5 MB buys a
+zero-infrastructure deployment (docs/DEPLOY.md). Alternatives rejected:
+webmap-only (cloud app would need a separately managed data release)
+and committing nothing (no deployed dashboard until Phase 8).
+
+Consequences that needed engineering:
+
+- The app resolves its data directory in a fixed order —
+  `ALMATY_ACCESS_DATA` env var → `data/app/` → `data/processed/` →
+  `data/sample/processed/` — taking the first COMPLETE directory. An
+  explicitly named directory (env var) must be complete on its own;
+  silently falling back from it would mask a half-built export.
+- `manifest.json` is deterministic (file sizes, no timestamps): an
+  unchanged pipeline re-exports byte-identically, so `git diff` of the
+  bundle is a real signal (tested).
+- Renamed or deleted scenarios are orphan-cleaned from the bundle, the
+  same pattern Phase 6 uses for processed outputs.
+- The SAMPLE export outputs (`data/sample/app/`, `data/sample/webmap/`)
+  stay git-ignored; CI builds them offline to prove the stage works.
+
+### D-070: A Streamlit-free data layer, and map colors that passed the checks
+
+**Decision.** Everything the dashboard computes lives in
+`src/almaty_access/dashboard/` (data resolution, layer tables, colors,
+reach sets, Altair specs, the two export builders); `app/streamlit_app.py`
+only lays out widgets. That split is what makes the phase testable: the
+data layer is unit-tested against the sample run, and the app itself is
+driven headlessly with `streamlit.testing.v1.AppTest` (boot, every
+layer, scenario selection, a click injected via session state, a broken
+data directory). The map reuses the notebook chart system; running the
+all-pairs color checks (normal-vision OKLab distance x100 >= 15,
+CVD-simulated >= 8; the dataviz validator's math, ported to Python
+because this machine has no Node) produced two deviations from
+notebook 05, both deliberate:
+
+- The NB05 LISA tints fail for the HL/LH pair (13.7 < 15 normal
+  vision), and no re-stepping of two-hue tints clears every pair — so
+  the map folds both spatial-outlier classes into ONE yellow class
+  (`#eda100`; worst remaining pair 14.0 CVD, 20.8 normal). The city
+  data contains zero HL/LH hexes, so notebook figures are unaffected;
+  'ns' and 'island' likewise share one label so the legend never shows
+  two identical swatches.
+- The scenario-delta layer paints ONLY gaining hexes (a zero painted
+  pale blue still reads as "changed"); the mode-gap layer uses the
+  REVERSED blue ramp so dark lands where transit lags car most, with
+  the caption stating that a lower bound divided by an upper bound
+  overstates car dependence.
+
+Sequential scales clip at the 2nd-98th percentile of painted values
+(stated in the caption); NaN rows are dropped, not painted gray.
+
+### D-071: Click-to-reach is r8 and baseline-only
+
+**Decision.** Clicking a hex highlights the hexes reachable within the
+selected budget and mode from the stored `tt_{mode}_r8` matrices (all
+four ship in the bundle; car is the largest at 4.9 MB) — the README's
+"keep the click-to-reach matrix only for res 8" performance rule.
+Phase 6 stores per-hex DELTAS, not scenario travel-time matrices, so
+the isochrone always shows the baseline network and the panel says so
+whenever a scenario is active; storing scenario matrices (~5 MB each ×
+3 scenarios × growth) was rejected for the free-hosting budget. The
+panel's job count is recomputed by summing `jobs_rf` over the reached
+set and cross-checked against the stored `acc_jobs_*` value (tested to
+rounding slack) — the same number two ways, which is exactly what a
+reviewer should ask for.
+
+### D-072: Streamlit, pydeck and Altair are regular dependencies
+
+**Decision.** The three app libraries go into `[project.dependencies]`
+(streamlit>=1.60 — the `width="stretch"` API replacing the deprecated
+`use_container_width` — pydeck>=0.9.1, altair>=5.4), not an optional
+extra. Streamlit Community Cloud installs the package straight from
+`pyproject.toml`, and an extra would have to be spelled in a separate
+requirements file there; the pipeline never imports any of them, so the
+only cost is install weight for pipeline-only users. The app theme
+(`.streamlit/config.toml`) carries the chart-system surface/ink/blue so
+Streamlit chrome matches the figures; the static web map is pydeck's
+standalone HTML with a title/legend/caveat overlay injected before
+`</body>` (pydeck has no overlay API) and the key-less Carto basemap.

@@ -1,0 +1,336 @@
+{
+  "target_indicator": "payroll_jobs_located",
+  "target_year": 2025,
+  "training_years": [
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "districts_modeled": {
+    "r8": [
+      "alatau",
+      "almaly",
+      "auezov",
+      "bostandyk",
+      "medeu",
+      "nauryzbay",
+      "turksib",
+      "zhetysu"
+    ],
+    "r9": [
+      "alatau",
+      "almaly",
+      "auezov",
+      "bostandyk",
+      "medeu",
+      "nauryzbay",
+      "turksib",
+      "zhetysu"
+    ]
+  },
+  "districts_without_hexes": {
+    "r8": [],
+    "r9": []
+  },
+  "official_totals": {
+    "alatau": 59420,
+    "almaly": 251774,
+    "auezov": 103151,
+    "bostandyk": 255303,
+    "medeu": 185156,
+    "nauryzbay": 29434,
+    "turksib": 94842,
+    "zhetysu": 112112
+  },
+  "rf_skipped_reason": "",
+  "lodo": [
+    {
+      "district": "alatau",
+      "actual": 59420.0,
+      "pred_baseline": 149266.1,
+      "pred_rf": 68388.9
+    },
+    {
+      "district": "almaly",
+      "actual": 251774.0,
+      "pred_baseline": 184876.5,
+      "pred_rf": 74619.4
+    },
+    {
+      "district": "auezov",
+      "actual": 103151.0,
+      "pred_baseline": 103799.6,
+      "pred_rf": 133419.7
+    },
+    {
+      "district": "bostandyk",
+      "actual": 255303.2,
+      "pred_baseline": 162107.9,
+      "pred_rf": 123159.6
+    },
+    {
+      "district": "medeu",
+      "actual": 185156.5,
+      "pred_baseline": 169463.1,
+      "pred_rf": 168133.7
+    },
+    {
+      "district": "nauryzbay",
+      "actual": 29434.0,
+      "pred_baseline": 94111.0,
+      "pred_rf": 45885.8
+    },
+    {
+      "district": "turksib",
+      "actual": 94841.5,
+      "pred_baseline": 119977.2,
+      "pred_rf": 93772.9
+    },
+    {
+      "district": "zhetysu",
+      "actual": 112112.2,
+      "pred_baseline": 95839.3,
+      "pred_rf": 67195.5
+    }
+  ],
+  "lodo_metrics_baseline": {
+    "mae": 46545.83016388798,
+    "mape": 0.6051716988196989,
+    "r2": 0.4752816534035903
+  },
+  "lodo_metrics_rf": {
+    "mae": 53499.47391486564,
+    "mape": 0.3410481726995753,
+    "r2": -0.035659038428713874
+  },
+  "rf_beats_baseline": true,
+  "permutation_importance_top15": [
+    {
+      "feature": "poi_cnt_craft",
+      "importance": 0.009319285038647674
+    },
+    {
+      "feature": "poi_cnt_education_kindergarten",
+      "importance": 0.006663877504528321
+    },
+    {
+      "feature": "poi_cnt_finance",
+      "importance": 0.006194439214820262
+    },
+    {
+      "feature": "poi_share_office",
+      "importance": 0.006172892181064929
+    },
+    {
+      "feature": "poi_cnt_hotel",
+      "importance": 0.005802099768618984
+    },
+    {
+      "feature": "poi_cnt_education_school",
+      "importance": 0.005454171488052593
+    },
+    {
+      "feature": "bf_gfa_large_m2",
+      "importance": 0.005452317910855329
+    },
+    {
+      "feature": "bf_gfa_commercial_m2",
+      "importance": 0.0052201431172317035
+    },
+    {
+      "feature": "poi_cnt_retail_other",
+      "importance": 0.004733263746762692
+    },
+    {
+      "feature": "poi_cnt_office",
+      "importance": 0.004623538722929781
+    },
+    {
+      "feature": "poi_cnt_pharmacy",
+      "importance": 0.004530420368562118
+    },
+    {
+      "feature": "ctx_k2_sum_bf_gfa_commercial_m2",
+      "importance": 0.0043407668307201865
+    },
+    {
+      "feature": "poi_cnt_public_institution",
+      "importance": 0.00387928290691804
+    },
+    {
+      "feature": "ctx_k1_sum_poi_cnt_total",
+      "importance": 0.0037797603059822205
+    },
+    {
+      "feature": "ctx_k2_sum_poi_cnt_total",
+      "importance": 0.0032350569512796714
+    }
+  ],
+  "jobs_per_resident": {
+    "alatau": {
+      "jobs": 59420,
+      "residents": 324990,
+      "jobs_per_resident": 0.183
+    },
+    "almaly": {
+      "jobs": 251774,
+      "residents": 116174,
+      "jobs_per_resident": 2.167
+    },
+    "auezov": {
+      "jobs": 103151,
+      "residents": 80380,
+      "jobs_per_resident": 1.283
+    },
+    "bostandyk": {
+      "jobs": 255303,
+      "residents": 213162,
+      "jobs_per_resident": 1.198
+    },
+    "medeu": {
+      "jobs": 185156,
+      "residents": 236897,
+      "jobs_per_resident": 0.782
+    },
+    "nauryzbay": {
+      "jobs": 29434,
+      "residents": 109912,
+      "jobs_per_resident": 0.268
+    },
+    "turksib": {
+      "jobs": 94842,
+      "residents": 248527,
+      "jobs_per_resident": 0.382
+    },
+    "zhetysu": {
+      "jobs": 112112,
+      "residents": 193161,
+      "jobs_per_resident": 0.58
+    }
+  },
+  "plausibility": {
+    "industrial_top20_mean_jobs": 1420.7,
+    "industrial_top20_mean_residents": 1993.1,
+    "city_mean_jobs": 1174.6,
+    "city_mean_residents": 1639.6,
+    "anchor_hex_count": 78,
+    "anchor_share_above_median_jobs": 0.949
+  },
+  "top20_hexes_rf": [
+    {
+      "h3": "8820e60a01fffff",
+      "district": "bostandyk",
+      "jobs_rf": 16607.0
+    },
+    {
+      "h3": "8820e60a03fffff",
+      "district": "bostandyk",
+      "jobs_rf": 15718.0
+    },
+    {
+      "h3": "8820e60121fffff",
+      "district": "almaly",
+      "jobs_rf": 15674.0
+    },
+    {
+      "h3": "8820e60a09fffff",
+      "district": "almaly",
+      "jobs_rf": 15366.0
+    },
+    {
+      "h3": "8820e60a55fffff",
+      "district": "almaly",
+      "jobs_rf": 15269.0
+    },
+    {
+      "h3": "8820e60a13fffff",
+      "district": "almaly",
+      "jobs_rf": 15192.0
+    },
+    {
+      "h3": "8820e60a1dfffff",
+      "district": "almaly",
+      "jobs_rf": 15095.0
+    },
+    {
+      "h3": "8820e60a0bfffff",
+      "district": "almaly",
+      "jobs_rf": 15029.0
+    },
+    {
+      "h3": "8820e60a11fffff",
+      "district": "almaly",
+      "jobs_rf": 15019.0
+    },
+    {
+      "h3": "8820e60a57fffff",
+      "district": "almaly",
+      "jobs_rf": 15004.0
+    },
+    {
+      "h3": "8820e60127fffff",
+      "district": "almaly",
+      "jobs_rf": 14778.0
+    },
+    {
+      "h3": "8820e60a1bfffff",
+      "district": "almaly",
+      "jobs_rf": 14691.0
+    },
+    {
+      "h3": "8820e60a19fffff",
+      "district": "almaly",
+      "jobs_rf": 14223.0
+    },
+    {
+      "h3": "8820e60a53fffff",
+      "district": "almaly",
+      "jobs_rf": 14203.0
+    },
+    {
+      "h3": "8820e60125fffff",
+      "district": "almaly",
+      "jobs_rf": 14189.0
+    },
+    {
+      "h3": "8820e60a17fffff",
+      "district": "bostandyk",
+      "jobs_rf": 12850.0
+    },
+    {
+      "h3": "8820e60a07fffff",
+      "district": "bostandyk",
+      "jobs_rf": 12462.0
+    },
+    {
+      "h3": "8820e60a0dfffff",
+      "district": "bostandyk",
+      "jobs_rf": 11950.0
+    },
+    {
+      "h3": "8820e60a05fffff",
+      "district": "bostandyk",
+      "jobs_rf": 11815.0
+    },
+    {
+      "h3": "8820e60a47fffff",
+      "district": "almaly",
+      "jobs_rf": 11729.0
+    }
+  ],
+  "quantiles": [
+    0.1,
+    0.5,
+    0.9
+  ],
+  "baseline_jobs_per_100m2": {
+    "commercial": 3.0,
+    "industrial": 1.0,
+    "public": 2.5,
+    "residential": 0.1,
+    "unknown": 0.5
+  },
+  "random_seed": 42
+}

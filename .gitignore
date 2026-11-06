@@ -18,6 +18,10 @@ data/processed/*
 !data/processed/.gitkeep
 data/sample/interim/
 data/sample/processed/
+# sample export outputs (the CITY bundle data/app/ and docs/webmap/ ARE
+# committed — they are what free hosting serves; D-069)
+data/sample/app/
+data/sample/webmap/
 # the Kontur country file is a large cached download, never committed
 kontur_population_country.gpkg*
 *.part

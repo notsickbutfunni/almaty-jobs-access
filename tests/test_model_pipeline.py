@@ -139,6 +139,8 @@ def synthetic_city(sample_config: Config, tmp_path_factory: pytest.TempPathFacto
             processed=tmp / "processed",
             sample=tmp / "sample",
             figures=tmp / "figures",
+            app=tmp / "app",
+            webmap=tmp / "webmap",
         ),
         model=dataclasses.replace(
             sample_config.model,

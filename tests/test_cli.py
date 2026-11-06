@@ -20,6 +20,7 @@ PIPELINE_COMMANDS = (
     "access",
     "equity",
     "scenarios",
+    "export",
     "report",
 )
 UTILITY_COMMANDS = ("info", "sample")
@@ -105,6 +106,8 @@ def test_features_with_missing_inputs_exits_cleanly(tmp_path: Path) -> None:
         "processed": str(tmp_path / "processed"),
         "sample": str(tmp_path / "sample"),
         "figures": str(tmp_path / "figures"),
+        "app": str(tmp_path / "app"),
+        "webmap": str(tmp_path / "webmap"),
     }
     config_file = tmp_path / "config.yaml"
     config_file.write_text(yaml.safe_dump(raw, allow_unicode=True), encoding="utf-8")
@@ -133,6 +136,11 @@ def test_features_with_missing_inputs_exits_cleanly(tmp_path: Path) -> None:
     assert result.exit_code == 1
     assert "failed" in result.output
 
+    # And for the Phase 7 export command.
+    result = runner.invoke(app, ["export", "--config", str(config_file)])
+    assert result.exit_code == 1
+    assert "failed" in result.output
+
 
 def test_access_help_names_steps_and_approximation() -> None:
     result = runner.invoke(app, ["access", "--help"])
@@ -156,3 +164,11 @@ def test_scenarios_help_names_outputs_and_caveat() -> None:
     flat = " ".join(result.output.split())
     assert "scenarios_report.json" in flat
     assert "lower-bound" in flat
+
+
+def test_export_help_names_steps_and_dashboard() -> None:
+    result = runner.invoke(app, ["export", "--help"])
+    assert result.exit_code == 0
+    flat = " ".join(result.output.split())
+    assert "bundle" in flat and "webmap" in flat
+    assert "streamlit run app/streamlit_app.py" in flat

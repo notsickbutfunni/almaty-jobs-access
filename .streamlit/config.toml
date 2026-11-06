@@ -1,0 +1,10 @@
+# Streamlit theme matched to the project chart system (dashboard/palette.py).
+[theme]
+base = "light"
+primaryColor = "#2a78d6"
+backgroundColor = "#fcfcfb"
+secondaryBackgroundColor = "#f0efec"
+textColor = "#0b0b0b"
+
+[browser]
+gatherUsageStats = false
